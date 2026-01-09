@@ -1,35 +1,38 @@
+/* frontend/src/assets/main.css */
+
+/* 引入基础样式（保留这个，因为它包含了一些重置样式） */
 @import './base.css';
 
+/* 修复 #app 的布局，让它占满全屏，而不是被限制在中间 */
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 100vw; /* 宽度设为视口宽度的 100% */
+  margin: 0;        /* 去掉默认的居中边距 */
+  padding: 0;       /* 去掉默认的内边距 */
   font-weight: normal;
+  display: block;   /* 关键：取消默认的 grid 布局 */
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* 覆盖默认的 body 样式 */
+body {
+  display: block;   /* 取消 flex 居中 */
+  place-items: unset;
+  min-width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
+/* 覆盖 base.css 中可能存在的针对 1024px 以上屏幕的强制分栏样式 */
 @media (min-width: 1024px) {
   body {
-    display: flex;
-    place-items: center;
+    display: block;
+    place-items: unset;
   }
 
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    display: block;
+    grid-template-columns: none;
+    padding: 0;
+    max-width: 100%;
   }
 }
