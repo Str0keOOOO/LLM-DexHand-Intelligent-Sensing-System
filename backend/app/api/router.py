@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import chat, robot
+from ..api.endpoints import chat, robot
 
 api_router = APIRouter()
 

@@ -55,6 +55,7 @@ const sendCommand = async () => {
             <div class="card-header">
               <span><el-icon><ChatLineRound /></el-icon> 自然语言指令交互</span>
               <el-tag size="small">LLM Agent</el-tag>
+              <!--TODO 可以变成某个大模型的名字-->
             </div>
           </template>
 

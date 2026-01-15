@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
+import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
 </script>
 
 <template>
@@ -20,6 +21,7 @@ import { RouterView, useRoute } from 'vue-router'
         <el-menu-item index="/">
           <el-icon><Monitor /></el-icon>
           <span>智能采集控制台</span>
+          <!-- TODO 像素级别的不对齐记得修复 -->
         </el-menu-item>
         <el-menu-item index="/about">
           <el-icon><Document /></el-icon>
@@ -33,6 +35,7 @@ import { RouterView, useRoute } from 'vue-router'
         <div class="header-content">
           <h3>基于大语言模型的 DexHand 灵巧手智能感知系统</h3>
           <el-tag type="success" effect="dark">系统在线</el-tag>
+          <!--TODO 系统在线需要后面评判-->
         </div>
       </el-header>
 
