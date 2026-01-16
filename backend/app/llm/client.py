@@ -11,4 +11,4 @@ def ask_ai(text: str, system_prompt: str) -> str:
         return resp.choices[0].message.content
     except Exception as e:
         print(f"LLM Error: {e}")
-        return "思考失败"
+        return "我不聪明"
