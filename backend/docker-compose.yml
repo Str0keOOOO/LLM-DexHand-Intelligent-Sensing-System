@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dexhand_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: dexhand_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: dexhand_influx
+    restart: always
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: password123456
+      DOCKER_INFLUXDB_INIT_ORG: dexhand_org
+      DOCKER_INFLUXDB_INIT_BUCKET: sensor_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+
+volumes:
+  mysql_data:
+  influxdb_data:

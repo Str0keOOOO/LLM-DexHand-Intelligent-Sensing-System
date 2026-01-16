@@ -1,8 +1,5 @@
 import request from '@/composable/utils/request'
-export interface RobotStatusData {
-    timestamp: string
-    fingers: number[] // [食指, 中指, 拇指]
-}
+import type {RobotStatusData} from "@/composable/interfaces/Inter2Robot.ts";
 
 // 获取机器人实时状态
 export function getRobotStatus() {

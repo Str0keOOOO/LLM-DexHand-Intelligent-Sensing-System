@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
-import { getRobotStatus } from '@/composable/api/robot';
+import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
 
 const chartRef = ref<HTMLElement | null>(null);
 let myChart: echarts.ECharts | null = null;
@@ -15,9 +15,8 @@ const initChart = () => {
       tooltip: { trigger: 'axis' },
       legend: {
         data: ['食指', '中指', '拇指'],
-        right: '5%',  // 距离右侧的距离
-        top: '5%',     // 距离顶部的距离
-        orient: 'vertical' // 如果想让三个标签垂直排列，可以加这一行；水平排列则删掉
+        right: '5%',
+        top: '5%',
       },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
       xAxis: { type: 'category', boundaryGap: false, data: [] as string[] },
@@ -39,10 +38,10 @@ const fetchDataAndUpdate = async () => {
 
     if (myChart) {
       const option = myChart.getOption() as any;
-      const data0 = option.series[0].data; // 食指
-      const data1 = option.series[1].data; // 中指
-      const data2 = option.series[2].data; // 拇指
-      const axisData = option.xAxis[0].data;
+      const data0 = (option.series?.[0]?.data as number[]) ?? [];
+      const data1 = (option.series?.[1]?.data as number[]) ?? [];
+      const data2 = (option.series?.[2]?.data as number[]) ?? [];
+      const axisData = (option.xAxis?.[0]?.data as string[]) ?? [];
 
       // 保持最近 30 个点
       if (data0.length > 30) {
@@ -56,7 +55,7 @@ const fetchDataAndUpdate = async () => {
       data0.push(res.fingers[0]);
       data1.push(res.fingers[1]);
       data2.push(res.fingers[2]);
-
+      // TODO 这里后端返回的是数组需要好好写一个api来最后对接
       myChart.setOption({
         xAxis: { data: axisData },
         series: [
@@ -68,6 +67,7 @@ const fetchDataAndUpdate = async () => {
     console.error("获取机器人状态失败:", error);
   }
 };
+// TODO这里变成hooks
 
 onMounted(() => {
   initChart();
@@ -90,6 +90,6 @@ onUnmounted(() => {
 <style scoped>
 .chart-container {
   width: 100%;
-  height: 350px;
+  height: 400px;
 }
 </style>

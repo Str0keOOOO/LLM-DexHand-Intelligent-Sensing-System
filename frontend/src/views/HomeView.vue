@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import RobotChart from '../components/RobotChart.vue'
+import RobotChart from '@/components/RobotChart.vue'
 import axios from 'axios'
+import {ChatLineRound, TrendCharts} from "@element-plus/icons-vue";
 
 // 聊天相关数据
 const inputCommand = ref('')

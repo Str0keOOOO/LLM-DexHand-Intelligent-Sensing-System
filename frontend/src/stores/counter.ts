@@ -10,3 +10,5 @@ export const useCounterStore = defineStore('counter', () => {
 
   return { count, doubleCount, increment }
 })
+
+//TODO 到底用得上吗？
