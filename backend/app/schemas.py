@@ -1,23 +1,38 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-
-# --- 聊天相关模型 ---
+# --- 1. 聊天相关 ---
 class ChatMessage(BaseModel):
-    role: str  # 'user' 或 'system'
+    role: str
     content: str
 
-
 class ChatRequest(BaseModel):
-    message: str  # 前端发来的最新指令
-
+    message: str
+    model: Optional[str] = None  # 允许为空，后端会有默认值
 
 class ChatResponse(BaseModel):
-    reply: str  # LLM 给用户的自然语言回复
-    action_code: Optional[str] = None  # 解析出的 ROS 动作指令 (用于调试显示)
+    reply: str
+    model_name: str
+    action_code: Optional[str] = None
 
+# --- 2. 模型列表与检测相关 (最关键的部分) ---
+class ModelOption(BaseModel):
+    label: str
+    value: str
 
-# --- 机器人状态模型 ---
+class ModelListResponse(BaseModel):
+    models: List[ModelOption]
+
+class CheckModelRequest(BaseModel):
+    model: str  # <--- 必须有这个字段，且必须是 str
+
+class CheckModelResponse(BaseModel):
+    success: bool
+    message: str
+
+# --- 3. 机器人状态 ---
 class RobotStatus(BaseModel):
-    timestamp: str
-    fingers: List[float]  # [食指载荷, 中指载荷, 拇指载荷]
+    timestamp: float
+    fingers: List[float]
+    status: Optional[str] = None
+    error: Optional[str] = None

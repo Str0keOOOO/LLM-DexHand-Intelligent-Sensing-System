@@ -37,3 +37,6 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api")
+
+# conda activate ldiss
+# python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

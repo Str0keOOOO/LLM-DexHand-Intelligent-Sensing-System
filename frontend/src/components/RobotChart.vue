@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
-import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
+// import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
 
 const chartRef = ref<HTMLElement | null>(null);
 let myChart: echarts.ECharts | null = null;
