@@ -8,6 +8,7 @@ import json
 
 
 AVAILABLE_MODELS = os.getenv("AVAILABLE_MODELS")
+print(f"🔍 Loaded AVAILABLE_MODELS env: {AVAILABLE_MODELS}")
 AVAILABLE_MODELS = json.loads(AVAILABLE_MODELS)
 
 

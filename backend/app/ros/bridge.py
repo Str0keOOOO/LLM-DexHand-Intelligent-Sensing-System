@@ -1,69 +1,48 @@
 import threading
 import json
-import os  # 新增: 用于读取环境变量
+import os
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Float32MultiArray
-# from app.config import settings # 删除: 不再依赖 config
+from std_msgs.msg import String
 
-class DexHandNode(Node):
+
+class BackendBridgeNode(Node):
     def __init__(self):
-        super().__init__('backend_bridge')
-        
-        # --- 1. 获取配置 (改为使用 os.getenv) ---
-        # 如果环境变量里没有配置，就使用后面的默认字符串
-        topic_command = os.getenv("ROS_TOPIC_COMMAND", "/dexhand/command")
-        topic_sensors = os.getenv("ROS_TOPIC_SENSORS", "/dexhand/sensors")
-        
-        # --- 2. 发布控制指令 ---
-        self.cmd_pub = self.create_publisher(String, topic_command, 10)
-        
-        # --- 3. 订阅传感器数据 (兼容 virtual_sensor_pub.py) ---
-        self.sensor_sub = self.create_subscription(
-            Float32MultiArray, topic_sensors, self.on_sensor, 10
-        )
-        
-        # --- 4. 订阅硬件状态 (适配 hardware_node.py 的 JSON 格式) ---
-        self.status_sub = self.create_subscription(
-            String, '/dexhand/status', self.on_status, 10
-        )
+        super().__init__("backend_bridge_listener")
 
-        # 内存存储最新状态
+        # 订阅 ROS 节点发出的状态
+        self.status_sub = self.create_subscription(String, "/dexhand/status", self.on_status_received, 10)
+
+        # 内存缓存：用于存最新的 ROS 数据，供 WebSocket 读取
+        # 默认状态
         self.latest_state = {
-            "fingers": [0.0, 0.0, 0.0, 0.0],
-            "timestamp": 0
+            "mode": "DISCONNECTED",  # 还没收到 ROS 数据时
+            "payload": None,
+            "timestamp": 0,
         }
 
-    def on_sensor(self, msg):
-        """处理 Float32MultiArray 类型的传感器数据"""
-        # 将数组转换为列表并更新
-        data = list(msg.data)
-        self.latest_state["fingers"] = data
-        # 这里也可以顺便写入数据库
-
-    def on_status(self, msg):
-        """处理 String (JSON) 类型的硬件状态数据"""
+    def on_status_received(self, msg):
+        """收到 ROS 数据，更新内存"""
         try:
             data = json.loads(msg.data)
-            # 假设 hardware_node 发送格式为 {"fingers": [...], "timestamp": ...}
-            if "fingers" in data:
-                self.latest_state["fingers"] = data["fingers"]
-            if "timestamp" in data:
-                self.latest_state["timestamp"] = data["timestamp"]
+            self.latest_state = data  # 直接覆盖，包含 mode 和 payload
         except json.JSONDecodeError:
-            self.get_logger().error("后端收到无法解析的 JSON 状态数据")
+            pass
 
-    def send_action(self, action: dict):
-        msg = String()
-        msg.data = json.dumps(action)
-        self.cmd_pub.publish(msg)
 
 # 全局单例
-ros_node = None
+bridge_node = None
 
-def start_ros():
-    global ros_node
-    if not rclpy.ok(): rclpy.init()
-    ros_node = DexHandNode()
-    threading.Thread(target=rclpy.spin, args=(ros_node,), daemon=True).start()
-    return ros_node
+
+def start_ros_bridge():
+    """在后台线程启动 ROS 节点"""
+    global bridge_node
+    if not rclpy.ok():
+        rclpy.init()
+
+    bridge_node = BackendBridgeNode()
+
+    # 启动线程通过 spin 监听消息
+    thread = threading.Thread(target=rclpy.spin, args=(bridge_node,), daemon=True)
+    thread.start()
+    return bridge_node
