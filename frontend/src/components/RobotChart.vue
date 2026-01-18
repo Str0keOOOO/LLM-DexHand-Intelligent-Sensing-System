@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
-import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
+
+// 移除旧的 HTTP API 引用
+// import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
 
 const chartRef = ref<HTMLElement | null>(null);
 let myChart: echarts.ECharts | null = null;
-let timer: any = null;
+let socket: WebSocket | null = null; // 新增 socket 实例
 
 const initChart = () => {
   if (chartRef.value) {
@@ -50,59 +52,97 @@ const formatTime = (timestamp: number) => {
   return `${h}:${m}:${s}`;
 };
 
-const fetchDataAndUpdate = async () => {
-  try {
-    const res = await getRobotStatus();
+// 新增：WebSocket 连接逻辑
+const connectWebSocket = () => {
+  // 自动判断 ws 或 wss，并使用当前 host（配合 Vite proxy 转发 /api）
+  // const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // const url = `${protocol}//${location.host}/api/ws/robot-data`;
 
-    if (myChart && res && res.fingers) {
-      const option = myChart.getOption() as any;
+  const url = 'ws://127.0.0.1:8000/api/ws/robot-data';
 
-      // 获取当前数据队列
-      const data0 = (option.series?.[0]?.data as number[]) ?? [];
-      const data1 = (option.series?.[1]?.data as number[]) ?? [];
-      const data2 = (option.series?.[2]?.data as number[]) ?? [];
-      const axisData = (option.xAxis?.[0]?.data as string[]) ?? [];
+  console.log("Attempting to connect to:", url); // 添加日志方便调试
+  socket = new WebSocket(url);
 
-      // 保持最近 50 个点，防止内存溢出
-      if (data0.length > 50) {
-        data0.shift(); data1.shift(); data2.shift(); axisData.shift();
-      }
+  socket.onopen = () => {
+    console.log("Robot WebSocket Connected");
+  };
 
-      // 1. 处理时间轴
-      const timeStr = formatTime(res.timestamp);
-      axisData.push(timeStr);
+  socket.onmessage = (event) => {
+    try {
+      const res = JSON.parse(event.data);
 
-      // 2. 处理传感器数据
-      // 确保数据存在，如果某根手指没数据则补 0
-      data0.push(res.fingers[0] ?? 0);
-      data1.push(res.fingers[1] ?? 0);
-      data2.push(res.fingers[2] ?? 0);
+      // 过滤掉后端初始化时的非数据消息
+      if (res.mode === 'BACKEND_INIT') return;
 
-      // 3. 更新图表
-      myChart.setOption({
-        xAxis: { data: axisData },
-        series: [
-          { data: data0 },
-          { data: data1 },
-          { data: data2 }
-        ]
-      });
+      // 适配数据结构：后端可能将数据包裹在 payload 中
+      // 根据你的 bridge.py，数据可能直接在 res 里，也可能在 res.payload 里
+      const dataContent = res.payload || res;
+
+      handleDataUpdate(dataContent);
+
+    } catch (err) {
+      console.error("WS Parse Error:", err);
     }
-  } catch (error) {
-    // 偶尔的请求失败不打印 error，避免刷屏，除非是为了调试
-    // console.error("Error fetching robot status:", error);
+  };
+
+  socket.onclose = () => {
+    console.log("Robot WebSocket Disconnected");
+  };
+
+  socket.onerror = (err) => {
+    console.error("Robot WebSocket Error:", err);
+  };
+};
+
+// 将原来的数据更新逻辑提取出来
+const handleDataUpdate = (res: any) => {
+  if (myChart && res && res.fingers) {
+    const option = myChart.getOption() as any;
+
+    // 获取当前数据队列
+    const data0 = (option.series?.[0]?.data as number[]) ?? [];
+    const data1 = (option.series?.[1]?.data as number[]) ?? [];
+    const data2 = (option.series?.[2]?.data as number[]) ?? [];
+    const axisData = (option.xAxis?.[0]?.data as string[]) ?? [];
+
+    // 保持最近 50 个点
+    if (data0.length > 50) {
+      data0.shift(); data1.shift(); data2.shift(); axisData.shift();
+    }
+
+    // 1. 处理时间轴
+    const timeStr = formatTime(res.timestamp);
+    axisData.push(timeStr);
+
+    // 2. 处理传感器数据
+    data0.push(res.fingers[0] ?? 0);
+    data1.push(res.fingers[1] ?? 0);
+    data2.push(res.fingers[2] ?? 0);
+
+    // 3. 更新图表
+    myChart.setOption({
+      xAxis: { data: axisData },
+      series: [
+        { data: data0 },
+        { data: data1 },
+        { data: data2 }
+      ]
+    });
   }
 };
 
 onMounted(() => {
   initChart();
-  // 每 100ms 刷新一次，动画更丝滑
-  timer = setInterval(fetchDataAndUpdate, 100);
+  // 启动 WebSocket 连接，替代原来的 setInterval
+  connectWebSocket();
   window.addEventListener('resize', () => myChart?.resize());
 });
 
 onUnmounted(() => {
-  clearInterval(timer);
+  // 组件销毁时关闭连接
+  if (socket) {
+    socket.close();
+  }
   window.removeEventListener('resize', () => myChart?.resize());
   myChart?.dispose();
 });
