@@ -1,26 +1,15 @@
-from influxdb_client import InfluxDBClient, Point
+import os
+from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
-from app.config import settings
 
+# 直接读取
+url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+token = os.getenv("INFLUXDB_TOKEN", "my-super-secret-token")
+org = os.getenv("INFLUXDB_ORG", "dexhand_org")
 
-class InfluxWrapper:
-    def __init__(self):
-        try:
-            self.client = InfluxDBClient(url=settings.INFLUXDB_URL, token=settings.INFLUXDB_TOKEN, org=settings.INFLUXDB_ORG)
-            self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
-        except Exception as e:
-            print(f"InfluxDB 连接失败: {e}")
-            self.client = None
+client = InfluxDBClient(url=url, token=token, org=org)
+write_api = client.write_api(write_options=SYNCHRONOUS)
+query_api = client.query_api()
 
-    def save_sensors(self, fingers: list):
-        if not self.client:
-            return
-        point = Point("dexhand_sensors").field("f1", fingers[0]).field("f2", fingers[1]).field("f3", fingers[2])
-        try:
-            self.write_api.write(bucket=settings.INFLUXDB_BUCKET, record=point)
-        except Exception:
-            pass
-
-
-# 单例
-influx_db = InfluxWrapper()
+# 导出这个变量供其他文件使用
+INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "sensor_data")

@@ -1,23 +1,29 @@
 import threading
 import json
+import os  # 新增: 用于读取环境变量
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float32MultiArray
-from app.config import settings
+# from app.config import settings # 删除: 不再依赖 config
 
 class DexHandNode(Node):
     def __init__(self):
         super().__init__('backend_bridge')
         
-        # 发布控制指令
-        self.cmd_pub = self.create_publisher(String, settings.ROS_TOPIC_COMMAND, 10)
+        # --- 1. 获取配置 (改为使用 os.getenv) ---
+        # 如果环境变量里没有配置，就使用后面的默认字符串
+        topic_command = os.getenv("ROS_TOPIC_COMMAND", "/dexhand/command")
+        topic_sensors = os.getenv("ROS_TOPIC_SENSORS", "/dexhand/sensors")
         
-        # 1. 订阅传感器数据 (兼容 virtual_sensor_pub.py)
+        # --- 2. 发布控制指令 ---
+        self.cmd_pub = self.create_publisher(String, topic_command, 10)
+        
+        # --- 3. 订阅传感器数据 (兼容 virtual_sensor_pub.py) ---
         self.sensor_sub = self.create_subscription(
-            Float32MultiArray, settings.ROS_TOPIC_SENSORS, self.on_sensor, 10
+            Float32MultiArray, topic_sensors, self.on_sensor, 10
         )
         
-        # 2. 新增：订阅硬件状态 (适配 hardware_node.py 的 JSON 格式)
+        # --- 4. 订阅硬件状态 (适配 hardware_node.py 的 JSON 格式) ---
         self.status_sub = self.create_subscription(
             String, '/dexhand/status', self.on_status, 10
         )

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
-// import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
+import { getRobotStatus } from '@/composable/api/Chat2Robot.ts';
 
 const chartRef = ref<HTMLElement | null>(null);
 let myChart: echarts.ECharts | null = null;
@@ -43,7 +43,6 @@ const initChart = () => {
 // 辅助函数：格式化时间戳 (秒 -> HH:mm:ss)
 const formatTime = (timestamp: number) => {
   if (!timestamp) return '';
-  // Python time.time() 返回的是秒，JS 需要毫秒
   const date = new Date(timestamp * 1000);
   const h = date.getHours().toString().padStart(2, '0');
   const m = date.getMinutes().toString().padStart(2, '0');
