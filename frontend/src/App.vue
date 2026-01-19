@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {RouterView, useRoute} from 'vue-router'
+import {RouterView} from 'vue-router'
 import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
 </script>
 
@@ -39,7 +39,6 @@ import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
       <el-header class="header">
         <div class="header-content">
           <h3>基于大语言模型的 DexHand 灵巧手智能感知系统</h3>
-          <el-tag type="success" effect="dark">系统在线</el-tag>
         </div>
       </el-header>
 

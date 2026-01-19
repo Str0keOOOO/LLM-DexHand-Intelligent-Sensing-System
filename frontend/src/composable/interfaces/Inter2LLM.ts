@@ -1,13 +1,11 @@
-// 找到 ChatRequest 和 ChatResponse 并修改为：
-
 export interface ChatRequest {
     message: string;
-    model?: string; // [新增] 可选的模型名称，例如 "deepseek-chat"
+    model?: string;
 }
 
 export interface ChatResponse {
     reply: string;
-    model_name: string; // [新增] 后端实际使用的模型名字
+    model_name: string;
     action_code?: string | null;
 }
 
@@ -27,4 +25,10 @@ export interface ModelOption {
 
 export interface ModelListResponse {
     models: ModelOption[];
+}
+
+export interface ChatMsg {
+    role: 'system' | 'user'
+    content: string
+    model?: string
 }

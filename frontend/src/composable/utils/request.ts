@@ -1,12 +1,10 @@
 import axios from 'axios'
 
-// 创建 axios 实例
 const request = axios.create({
     baseURL: '/api',
     timeout: 10000 // 请求超时时间：5秒
 })
 
-// 请求拦截器（可扩展：例如添加 Token）
 request.interceptors.request.use(
     (config) => {
         return config
@@ -16,7 +14,6 @@ request.interceptors.request.use(
     }
 )
 
-// 响应拦截器（可扩展：统一处理错误）
 request.interceptors.response.use(
     (response) => {
         return response.data

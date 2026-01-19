@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {ref, watch, onMounted} from 'vue'
+import {ref, watch, onMounted, computed} from 'vue'
 import RobotChart from '@/components/RobotChart.vue'
-import {sendChatMsg, checkModelConnect, getModels} from '@/composable/api/Chat2LLM'
+import type {ChatMsg} from "@/composable/hooks/useSendCommand";
 import {
   ChatLineRound,
   TrendCharts,
@@ -10,141 +10,56 @@ import {
   CircleClose,
   Loading
 } from "@element-plus/icons-vue"
+import {useModels} from '@/composable/hooks/useModels'
+import {useModelCheck} from '@/composable/hooks/useModelCheck'
+import {useSendCommand} from '@/composable/hooks/useSendCommand'
 
-// --- 1. 模型数据与状态 ---
-const selectedModel = ref('')
-const modelOptions = ref<Array<{ label: string, value: string }>>([])
-const isLoadingModels = ref(false)
-const connStatus = ref('init')
-const connMessage = ref('')
+const inputCommand = ref('')
+const isSending = ref(false)
+const chatHistory = ref<ChatMsg[]>([
+  {role: 'system', content: 'LDISS 系统已就绪。请输入指令...'}
+])
 
-// --- 2. 核心逻辑：获取列表 ---
-const initModels = async () => {
-  isLoadingModels.value = true
-  try {
-    const res = await getModels()
-    // 这里的 res 已经被 request.ts 拦截器解包了，直接取属性
-    // @ts-ignore
-    if (res.models && res.models.length > 0) {
-      // @ts-ignore
-      modelOptions.value = res.models
-      // [修复关键点] 确保赋值的是 .value (字符串)，而不是整个对象 item
-      // @ts-ignore
-      selectedModel.value = res.models[0].value
-    } else {
-      modelOptions.value = [{label: '默认模型 (GPT-3.5)', value: 'gpt-3.5-turbo'}]
-      selectedModel.value = 'gpt-3.5-turbo'
-    }
-  } catch (error) {
-    console.error("无法获取模型列表:", error)
-    modelOptions.value = [{label: '连接失败 (默认)', value: 'gpt-3.5-turbo'}]
-    selectedModel.value = 'gpt-3.5-turbo'
-  } finally {
-    isLoadingModels.value = false
-  }
-}
+const {modelOptions, selectedModel, isLoadingModels, initModels} = useModels()
+const {connStatus, connMessage, handleModelCheck} = useModelCheck()
+const {sendCommand} = useSendCommand({
+  chatHistory,
+  inputCommand,
+  selectedModel,
+  connStatus,
+  isSending
+})
 
-// --- 3. 逻辑：模型连接检测 (已修复对象类型问题) ---
-const handleModelCheck = async (modelVal: any) => {
-  if (!modelVal) return
 
-  // [修复核心] 防御性编程：如果传进来的是对象，自动提取 value
-  const realModelName = (typeof modelVal === 'object' && modelVal !== null)
-      ? modelVal.value
-      : modelVal
+// TODO 思考要不要封装到useModelCheck里面
+const connStatusText = computed(() => {
+  return connStatus.value === 'checking'
+      ? '检测中'
+      : connStatus.value === 'success'
+          ? '正常'
+          : connStatus.value === 'fail'
+              ? '异常'
+              : '未知'
+})
 
-  console.log("Checking model:", realModelName) // 调试日志
-
-  connStatus.value = 'checking'
-  connMessage.value = '连接检测中...'
-
-  try {
-    const res = await checkModelConnect(realModelName)
-    // @ts-ignore
-    if (res.success) {
-      connStatus.value = 'success'
-      connMessage.value = '模型连接正常'
-    } else {
-      connStatus.value = 'fail'
-      // @ts-ignore
-      connMessage.value = res.message || '连接失败'
-    }
-  } catch (e) {
-    connStatus.value = 'fail'
-    connMessage.value = '网络错误/后端不可达'
-  }
-}
-
-watch(selectedModel, (newVal) => {
-  handleModelCheck(newVal)
+const connStatusColor = computed(() => {
+  return connStatus.value === 'checking'
+      ? '#E6A23C'
+      : connStatus.value === 'success'
+          ? '#67C23A'
+          : connStatus.value === 'fail'
+              ? '#F56C6C'
+              : '#909399'
 })
 
 onMounted(() => {
   initModels()
 })
 
-// --- 4. 聊天逻辑 ---
-const inputCommand = ref('')
-const isSending = ref(false)
+watch(selectedModel, (newVal) => {
+  handleModelCheck(newVal)
+})
 
-interface ChatMsg {
-  role: 'system' | 'user'
-  content: string
-  model?: string
-}
-
-const chatHistory = ref<ChatMsg[]>([
-  {role: 'system', content: 'LDISS 系统已就绪。请输入指令...'}
-])
-
-const sendCommand = async () => {
-  if (!inputCommand.value) return
-
-  // 同样要做处理，防止 selectedModel 是对象
-  const modelToUse = (typeof selectedModel.value === 'object' && selectedModel.value !== null)
-      ? (selectedModel.value as any).value
-      : selectedModel.value
-
-  if (connStatus.value === 'fail') {
-    chatHistory.value.push({
-      role: 'system',
-      content: `❌ 发送失败：模型 [${modelToUse}] 未连接成功。`
-    })
-    return
-  }
-
-  chatHistory.value.push({role: 'user', content: inputCommand.value})
-  const textToSend = inputCommand.value
-
-  inputCommand.value = ''
-  isSending.value = true
-
-  try {
-    const res = await sendChatMsg(textToSend, modelToUse)
-
-    chatHistory.value.push({
-      role: 'system',
-      // @ts-ignore
-      content: res.reply,
-      // @ts-ignore
-      model: res.model_name
-    })
-
-    // @ts-ignore
-    if (res.action_code) {
-      chatHistory.value.push({
-        role: 'system',
-        // @ts-ignore
-        content: `[执行层] ${res.action_code}`,
-        model: 'Robot Core'
-      })
-    }
-  } catch (error) {
-    chatHistory.value.push({role: 'system', content: '❌ 错误：请求超时或服务异常'})
-  } finally {
-    isSending.value = false
-  }
-}
 </script>
 
 <template>
@@ -243,14 +158,16 @@ const sendCommand = async () => {
             <el-card shadow="hover" class="status-card">
               <div class="statistic">
                 <div class="label">通信状态</div>
-                <div class="value" style="color: #67C23A">正常</div>
+                <div class="value" :style="{ color: connStatusColor }">
+                  {{ connStatusText }}
+                </div>
               </div>
             </el-card>
           </el-col>
         </el-row>
         <el-card class="box-card">
           <template #header>
-            <div class="card-header"><span><el-icon><TrendCharts/></el-icon> 传感器数据监控</span></div>
+            <div class="card-header"><span><el-icon><TrendCharts/></el-icon>传感器数据监控</span></div>
           </template>
           <RobotChart/>
         </el-card>
