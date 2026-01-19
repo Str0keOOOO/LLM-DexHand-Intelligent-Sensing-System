@@ -22,7 +22,7 @@ export default defineConfig({
             '/api': {
                 target: 'http://localhost:8000', // 后端地址
                 changeOrigin: true, // 允许跨域
-                ws: true
+                ws: true,
                 // 如果后端路由里本来就有 /api 前缀，就不需要 rewrite
                 // rewrite: (path) => path.replace(/^\/api/, '')
             }

@@ -5,26 +5,33 @@ import json
 import time
 import math
 import random
-from pyzlg_dexhand.dexhand_interface import DexHand, RightDexHand
+
+# [修复点] 安全导入驱动库，防止因缺少库而导致节点直接崩溃
+try:
+    from pyzlg_dexhand.dexhand_interface import DexHand, RightDexHand
+    HAS_DRIVER = True
+except ImportError:
+    print("Warning: 'pyzlg_dexhand' not found. Running in MOCK mode.")
+    HAS_DRIVER = False
 
 
-HAS_DRIVER = True
 class DexHandNode(Node):
     def __init__(self):
         super().__init__("dexhand_hardware_node")
 
         self.mode = "CHECKING"
         self.hand = None
-
-        # 1. 尝试连接硬件
-        self.connect_hardware()
+        self.start_time = time.time()
 
         # 2. 发布话题
         self.status_publisher = self.create_publisher(String, "/dexhand/status", 10)
 
+        # 1. 尝试连接硬件 (放在创建发布者之后，方便打印日志)
+        self.connect_hardware()
+
         # 3. 定时器 10Hz
         self.timer = self.create_timer(0.1, self.timer_callback)
-        self.start_time = time.time()
+        
 
     def connect_hardware(self):
         """判断是真机还是模拟"""
@@ -40,7 +47,7 @@ class DexHandNode(Node):
                 else:
                     raise Exception("无法读取固件")
             except Exception as e:
-                self.get_logger().error(f"❌ 硬件连接失败: {e}")
+                self.get_logger().error(f"❌ 硬件连接失败: {e} -> 切换至模拟模式")
                 self.mode = "MOCK"
         else:
             self.get_logger().warn("未找到驱动库，进入模拟模式")
@@ -49,13 +56,17 @@ class DexHandNode(Node):
     def timer_callback(self):
         current_data = {}
 
-        # A. 获取数据
+        # A. 获取数据 (仅在 REAL 模式且连接正常时)
         if self.mode == "REAL" and self.hand:
             try:
                 # 获取真实反馈
                 feedback = self.hand.get_feedback()
-                current_data = {"joints": {k: v.angle for k, v in feedback.joints.items()}, "touch": {k: v.normal_force for k, v in feedback.touch.items()}}
+                current_data = {
+                    "joints": {k: v.angle for k, v in feedback.joints.items()}, 
+                    "touch": {k: v.normal_force for k, v in feedback.touch.items()}
+                }
             except Exception:
+                self.get_logger().warn("读取硬件失败，切换回模拟模式")
                 self.mode = "MOCK"  # 运行时掉线自动切换
 
         # B. 如果是模拟模式 (或掉线)，生成模拟信号
@@ -63,8 +74,15 @@ class DexHandNode(Node):
             t = time.time() - self.start_time
             # 模拟正弦波数据
             current_data = {
-                "joints": {"th_rot": 30 + 10 * math.sin(t), "ff_mcp": 45 + 15 * math.cos(t), "lf_mcp": 10 + 5 * math.sin(t * 2)},
-                "touch": {"th": abs(2 * math.sin(t)), "ff": abs(2 * math.cos(t))},
+                "joints": {
+                    "th_rot": 30 + 10 * math.sin(t), 
+                    "ff_mcp": 45 + 15 * math.cos(t), 
+                    "lf_mcp": 10 + 5 * math.sin(t * 2)
+                },
+                "touch": {
+                    "th": abs(2 * math.sin(t)), 
+                    "ff": abs(2 * math.cos(t))
+                },
             }
 
         # C. 构造统一的数据包

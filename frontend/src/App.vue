@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router'
+import {RouterView, useRoute} from 'vue-router'
 import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
 </script>
 
@@ -7,7 +7,9 @@ import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
   <el-container class="layout-container">
     <el-aside width="220px" class="aside-menu">
       <div class="logo-area">
-        <el-icon><Cpu /></el-icon>
+        <el-icon>
+          <Cpu/>
+        </el-icon>
         <span>LDISS 系统</span>
       </div>
       <el-menu
@@ -19,12 +21,15 @@ import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
           router
       >
         <el-menu-item index="/">
-          <el-icon><Monitor /></el-icon>
+          <el-icon>
+            <Monitor/>
+          </el-icon>
           <span>智能采集控制台</span>
-          <!-- TODO 像素级别的不对齐记得修复 -->
         </el-menu-item>
         <el-menu-item index="/about">
-          <el-icon><Document /></el-icon>
+          <el-icon>
+            <Document/>
+          </el-icon>
           <span>系统说明</span>
         </el-menu-item>
       </el-menu>
@@ -35,12 +40,11 @@ import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
         <div class="header-content">
           <h3>基于大语言模型的 DexHand 灵巧手智能感知系统</h3>
           <el-tag type="success" effect="dark">系统在线</el-tag>
-          <!--TODO 系统在线需要后面评判-->
         </div>
       </el-header>
 
       <el-main class="main-content">
-        <RouterView />
+        <RouterView/>
       </el-main>
     </el-container>
   </el-container>
@@ -67,6 +71,10 @@ import {Cpu, Document, Monitor} from "@element-plus/icons-vue";
   background-color: #151820;
   color: #409EFF;
   gap: 10px;
+}
+
+.el-menu-vertical {
+  border-right: none;
 }
 
 .header {
