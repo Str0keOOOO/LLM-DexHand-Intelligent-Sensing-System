@@ -4,3 +4,8 @@ export interface ConnectOptions {
     onClose?: (ev: CloseEvent) => void;
     onError?: (ev: Event) => void;
 }
+
+export interface RosHealth {
+    status: 'ok';
+    ros_bridge?: 'connected' | 'initializing';
+}

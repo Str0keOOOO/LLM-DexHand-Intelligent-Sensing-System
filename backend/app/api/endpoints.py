@@ -21,14 +21,14 @@ router = APIRouter()
 # 1. 系统基础与 WebSocket 接口
 # ==========================================
 
-@router.get("/health")
+@router.get("/ros_ws/health")
 async def health_check():
     # 动态检查模块中的变量
     is_connected = ros_bridge.bridge_node is not None
     status_data = {"status": "ok", "ros_bridge": "connected" if is_connected else "initializing"}
     return status_data
 
-@router.websocket("/ws/robot-data")
+@router.websocket("/ros_ws/robot-data")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     start_time = time.time()

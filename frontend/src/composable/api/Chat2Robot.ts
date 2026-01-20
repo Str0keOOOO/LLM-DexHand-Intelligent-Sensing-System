@@ -1,63 +1,23 @@
-import type {ConnectOptions} from "@/composable/interfaces/Inter2Robot.ts";
+import request from '@/composable/utils/request'
+import type {RosHealth} from "@/composable/interfaces/Inter2Robot.ts";
 
-export function connectRobotWebSocket(
-    onData: (data: any) => void,
-    options: ConnectOptions = {}
-): { socket: WebSocket | null; close: () => void } {
+export function buildUrl(path?: string) {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const path = options.path ?? '/api/ws/robot-data';
-    const normalizedPath = path.startsWith('/') ? path : '/' + path;
-    const url = `${protocol}//${location.host}${normalizedPath}`;
+    const p = path ?? '/api/ros_ws/robot-data';
+    const normalized = p.startsWith('/') ? p : '/' + p;
+    return `${protocol}//${location.host}${normalized}`;
+}
 
-    let socket: WebSocket | null = null;
-
+export function safeParse(raw: unknown) {
+    if (typeof raw !== 'string') return null;
     try {
-        socket = new WebSocket(url);
-    } catch (err) {
-        console.error('WebSocket create error:', err);
-        return {
-            socket: null,
-            close: () => {
-            }
-        };
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error('WebSocket message parse error:', e);
+        return null;
     }
+}
 
-    socket.onopen = (ev) => {
-        options.onOpen?.(ev);
-    };
-
-    socket.onclose = (ev) => {
-        options.onClose?.(ev);
-    };
-
-    socket.onerror = (ev) => {
-        console.error('WebSocket error:', ev);
-        options.onError?.(ev);
-    };
-
-    socket.onmessage = (event: MessageEvent) => {
-        try {
-            const res = JSON.parse(event.data);
-            if (res.mode === 'BACKEND_INIT') return;
-            const dataContent = res.payload || res;
-            if (res.timestamp && dataContent.timestamp === undefined) {
-                dataContent.timestamp = res.timestamp;
-            }
-            onData(dataContent);
-        } catch (err) {
-            console.error('WebSocket message parse error:', err);
-        }
-    };
-
-    return {
-        socket,
-        close: () => {
-            if (!socket) return;
-            try {
-                socket.close();
-            } catch (e) {
-                console.error('WebSocket close error:', e);
-            }
-        }
-    };
+export async function rosHealth(){
+    return request.get<RosHealth>('/ros_ws/health')
 }

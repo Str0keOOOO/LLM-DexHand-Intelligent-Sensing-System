@@ -1,6 +1,75 @@
-import {ref, onMounted, onUnmounted} from 'vue';
+// typescript
+// 文件：`src/composable/hooks/useRobotChart.ts`
+import {ref, onMounted, onUnmounted, onBeforeUnmount, computed} from 'vue';
 import * as echarts from 'echarts';
-import type {ChartDataPoint, SeriesDataInterface} from '@/composable/interfaces/Inter2Chart';
+import type { ChartDataPoint, SeriesDataInterface } from '@/composable/interfaces/Inter2Chart';
+import type { ConnectOptions } from '@/composable/interfaces/Inter2Robot.ts';
+import { buildUrl, safeParse,rosHealth } from '@/composable/api/Chat2Robot';
+import type { ConnStatus } from '@/composable/types/Type2LLM';
+
+export function useRobotSocket(onData?: (data: any) => void, options?: ConnectOptions) {
+    const socket = ref<WebSocket | null>(null);
+    const isConnected = ref(false);
+
+    const connect = () => {
+        const url = buildUrl(options?.path);
+        try {
+            socket.value = new WebSocket(url);
+        } catch (err) {
+            console.error('WebSocket create error:', err);
+            socket.value = null;
+            isConnected.value = false;
+            return socket.value;
+        }
+
+        socket.value.onopen = (ev) => {
+            isConnected.value = true;
+            options?.onOpen?.(ev);
+        };
+
+        socket.value.onclose = (ev) => {
+            isConnected.value = false;
+            options?.onClose?.(ev);
+        };
+
+        socket.value.onerror = (ev) => {
+            console.error('WebSocket error:', ev);
+            options?.onError?.(ev);
+        };
+
+        socket.value.onmessage = (event: MessageEvent) => {
+            const res = safeParse(event.data);
+            if (!res) return;
+            if (res.mode === 'BACKEND_INIT') return;
+            const dataContent = res.payload || res;
+            if (res.timestamp && dataContent.timestamp === undefined) {
+                dataContent.timestamp = res.timestamp;
+            }
+            onData?.(dataContent);
+        };
+
+        return socket.value;
+    };
+
+    const close = () => {
+        if (!socket.value) return;
+        try {
+            socket.value.close();
+        } catch (e) {
+            console.error('WebSocket close error:', e);
+        } finally {
+            socket.value = null;
+            isConnected.value = false;
+        }
+    };
+
+    return {
+        socket,
+        connect,
+        close,
+        isConnected
+    };
+}
 
 export function useRobotChart(options?: {
     autoInit?: boolean;
@@ -17,9 +86,9 @@ export function useRobotChart(options?: {
     let dataBuffer: ChartDataPoint[] = [];
 
     const axisData: string[] = [];
-    const seriesData: SeriesDataInterface = {ff: [], mf: [], th: []};
+    const seriesData: SeriesDataInterface = { ff: [], mf: [], th: [] };
 
-    const formatTime = (timestamp: number) => {
+    function formatTime(timestamp: number): string {
         if (!timestamp && timestamp !== 0) return '';
         const ts = Number(timestamp);
         const date = new Date(ts > 1e12 ? ts : ts * 1000);
@@ -28,9 +97,9 @@ export function useRobotChart(options?: {
         const s = date.getSeconds().toString().padStart(2, '0');
         const ms = date.getMilliseconds().toString().padStart(3, '0').slice(0, 2);
         return `${h}:${m}:${s}.${ms}`;
-    };
+    }
 
-    const initChart = () => {
+    function initChart(): void {
         if (!chartRef.value) return;
         if (myChart) myChart.dispose();
         myChart = echarts.init(chartRef.value);
@@ -39,15 +108,15 @@ export function useRobotChart(options?: {
             animation: true,
             animationDurationUpdate: RENDER_INTERVAL,
             animationEasingUpdate: 'linear',
-            title: {text: 'DexHand 关节实时载荷'},
-            tooltip: {trigger: 'axis'},
-            legend: {data: ['食指', '中指', '拇指'], right: '5%', top: '5%'},
-            grid: {left: '3%', right: '5%', bottom: '3%'},
+            title: { text: 'DexHand 关节实时载荷' },
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['食指', '中指', '拇指'], right: '5%', top: '5%' },
+            grid: { left: '3%', right: '5%', bottom: '3%' },
             xAxis: {
                 type: 'category',
                 boundaryGap: false,
                 data: axisData,
-                axisLabel: {hideOverlap: true, interval: 'auto'}
+                axisLabel: { hideOverlap: true, interval: 'auto' }
             },
             yAxis: {
                 type: 'value',
@@ -62,7 +131,7 @@ export function useRobotChart(options?: {
                     data: seriesData.ff,
                     smooth: true,
                     showSymbol: false,
-                    itemStyle: {color: '#5470C6'}
+                    itemStyle: { color: '#5470C6' }
                 },
                 {
                     name: '中指',
@@ -70,7 +139,7 @@ export function useRobotChart(options?: {
                     data: seriesData.mf,
                     smooth: true,
                     showSymbol: false,
-                    itemStyle: {color: '#91CC75'}
+                    itemStyle: { color: '#91CC75' }
                 },
                 {
                     name: '拇指',
@@ -78,18 +147,20 @@ export function useRobotChart(options?: {
                     data: seriesData.th,
                     smooth: true,
                     showSymbol: false,
-                    itemStyle: {color: '#FAC858'}
+                    itemStyle: { color: '#FAC858' }
                 }
             ]
         };
 
         myChart.setOption(option);
         window.addEventListener('resize', resizeChart);
-    };
+    }
 
-    const resizeChart = () => myChart?.resize();
+    function resizeChart(): void {
+        myChart?.resize();
+    }
 
-    const handleDataUpdate = (res: any) => {
+    function handleDataUpdate(res: any): void {
         const timestamp = res.timestamp ?? res.time ?? Date.now() / 1000;
         let f0 = 0, f1 = 0, f2 = 0;
 
@@ -112,9 +183,9 @@ export function useRobotChart(options?: {
             mf: f1,
             th: f2
         });
-    };
+    }
 
-    const startRenderingLoop = () => {
+    function startRenderingLoop(): void {
         if (renderIntervalTimer) return;
         renderIntervalTimer = window.setInterval(() => {
             if (!myChart || dataBuffer.length === 0) return;
@@ -136,24 +207,24 @@ export function useRobotChart(options?: {
             }
 
             myChart.setOption({
-                xAxis: {data: axisData},
+                xAxis: { data: axisData },
                 series: [
-                    {data: seriesData.ff},
-                    {data: seriesData.mf},
-                    {data: seriesData.th}
+                    { data: seriesData.ff },
+                    { data: seriesData.mf },
+                    { data: seriesData.th }
                 ]
             });
         }, RENDER_INTERVAL);
-    };
+    }
 
-    const stopRenderingLoop = () => {
+    function stopRenderingLoop(): void {
         if (renderIntervalTimer) {
             clearInterval(renderIntervalTimer);
             renderIntervalTimer = null;
         }
-    };
+    }
 
-    const disposeChart = () => {
+    function disposeChart(): void {
         stopRenderingLoop();
         window.removeEventListener('resize', resizeChart);
         myChart?.dispose();
@@ -163,16 +234,27 @@ export function useRobotChart(options?: {
         seriesData.ff.length = 0;
         seriesData.mf.length = 0;
         seriesData.th.length = 0;
-    };
+    }
 
-    onMounted(() => {
+    function handleMounted(): void {
         if (options?.autoInit) initChart();
         if (options?.autoStart) startRenderingLoop();
-    });
+    }
 
-    onUnmounted(() => {
+    function handleUnmounted(): void {
         disposeChart();
-    });
+    }
+
+    onMounted(handleMounted);
+    onUnmounted(handleUnmounted);
+
+    function isRunning(): boolean {
+        return !!renderIntervalTimer;
+    }
+
+    function isInited(): boolean {
+        return !!myChart;
+    }
 
     return {
         chartRef,
@@ -181,7 +263,97 @@ export function useRobotChart(options?: {
         pushData: handleDataUpdate,
         startRenderingLoop,
         stopRenderingLoop,
-        isRunning: () => !!renderIntervalTimer,
-        isInited: () => !!myChart
+        isRunning,
+        isInited
+    };
+}
+
+export function useRobotHealth(options?: { url?: string; interval?: number; autoStart?: boolean }) {
+    const intervalMs = options?.interval ?? 5000;
+
+    const robotStatus = ref<ConnStatus>('init');
+    const robotMessage = ref<string>('');
+
+    let timer: number | null = null;
+
+    async function checkRobotHealth(): Promise<boolean> {
+        robotStatus.value = 'checking';
+        robotMessage.value = '检测中...';
+
+        try {
+            const res = await rosHealth();
+            const data = (res as any).data ?? res;
+            if (!data) {
+                robotStatus.value = 'fail';
+                robotMessage.value = '无返回数据';
+                return false;
+            }
+
+            const ok = data.status === 'ok' && data.ros_bridge === 'connected';
+            if (ok) {
+                robotStatus.value = 'success';
+                robotMessage.value = '机器人在线';
+                return true;
+            } else {
+                robotStatus.value = 'fail';
+                robotMessage.value = data.ros_bridge ? `状态：${data.ros_bridge}` : '机器人未就绪';
+                return false;
+            }
+        } catch (err: any) {
+            robotStatus.value = 'fail';
+            robotMessage.value = err?.message ?? String(err) ?? '请求失败';
+            return false;
+        }
+    }
+
+    function startAutoPoll() {
+        if (timer) return;
+        checkRobotHealth().catch(() => {});
+        timer = window.setInterval(() => {
+            checkRobotHealth().catch(() => {});
+        }, intervalMs);
+    }
+
+    function stopAutoPoll() {
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+    }
+
+    if (options?.autoStart) startAutoPoll();
+
+    onBeforeUnmount(() => {
+        stopAutoPoll();
+    });
+
+    const connStatusText = computed(() => {
+        return robotStatus.value === 'checking'
+            ? '检测中'
+            : robotStatus.value === 'success'
+                ? '正常'
+                : robotStatus.value === 'fail'
+                    ? '异常'
+                    : '未知'
+    })
+
+    const connStatusColor = computed(() => {
+        return robotStatus.value === 'checking'
+            ? '#E6A23C'
+            : robotStatus.value === 'success'
+                ? '#67C23A'
+                : robotStatus.value === 'fail'
+                    ? '#F56C6C'
+                    : '#909399'
+    })
+
+    return {
+        robotStatus,
+        robotMessage,
+        connStatusText,
+        connStatusColor,
+        checkRobotHealth,
+        startAutoPoll,
+        stopAutoPoll
     };
 }

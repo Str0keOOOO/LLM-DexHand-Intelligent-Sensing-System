@@ -1,55 +1,15 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, computed} from 'vue'
+import {watch, onMounted} from 'vue'
 import RobotChart from '@/components/RobotChart.vue'
-import type {ChatMsg} from "@/composable/hooks/useSendCommand";
-import {
-  ChatLineRound,
-  TrendCharts,
-  Cpu,
-  CircleCheck,
-  CircleClose,
-  Loading
-} from "@element-plus/icons-vue"
-import {useModels} from '@/composable/hooks/useModels'
-import {useModelCheck} from '@/composable/hooks/useModelCheck'
-import {useSendCommand} from '@/composable/hooks/useSendCommand'
+import {ChatLineRound, TrendCharts, Cpu, CircleCheck, CircleClose, Loading} from "@element-plus/icons-vue"
+import {useChat} from '@/composable/hooks/useChat.ts'
+import {useRobotHealth} from '@/composable/hooks/useRobotChart';
 
-const inputCommand = ref('')
-const isSending = ref(false)
-const chatHistory = ref<ChatMsg[]>([
-  {role: 'system', content: 'LDISS 系统已就绪。请输入指令...'}
-])
+const {modelOptions, selectedModel, isLoadingModels, initModels, connStatus,connMessage, handleModelCheck, chatHistory, inputCommand, isSending, sendCommand} = useChat()
+const { robotStatus, robotMessage, connStatusText, connStatusColor, startAutoPoll, checkRobotHealth } = useRobotHealth({ autoStart: true, interval: 5000 })
 
-const {modelOptions, selectedModel, isLoadingModels, initModels} = useModels()
-const {connStatus, connMessage, handleModelCheck} = useModelCheck()
-const {sendCommand} = useSendCommand({
-  chatHistory,
-  inputCommand,
-  selectedModel,
-  connStatus,
-  isSending
-})
-
-
-// TODO 思考要不要封装到useModelCheck里面
-const connStatusText = computed(() => {
-  return connStatus.value === 'checking'
-      ? '检测中'
-      : connStatus.value === 'success'
-          ? '正常'
-          : connStatus.value === 'fail'
-              ? '异常'
-              : '未知'
-})
-
-const connStatusColor = computed(() => {
-  return connStatus.value === 'checking'
-      ? '#E6A23C'
-      : connStatus.value === 'success'
-          ? '#67C23A'
-          : connStatus.value === 'fail'
-              ? '#F56C6C'
-              : '#909399'
+onMounted(() => {
+  checkRobotHealth()
 })
 
 onMounted(() => {
