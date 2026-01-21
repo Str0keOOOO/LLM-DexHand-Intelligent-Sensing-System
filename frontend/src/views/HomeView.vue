@@ -3,7 +3,7 @@ import {watch, onMounted} from 'vue'
 import RobotChart from '@/components/RobotChart.vue'
 import {ChatLineRound, TrendCharts, Cpu, CircleCheck, CircleClose, Loading} from "@element-plus/icons-vue"
 import {useChat} from '@/composable/hooks/useChat.ts'
-import {useRobotHealth} from '@/composable/hooks/useRobotChart';
+import {useRobotHealth} from '@/composable/hooks/useRobot.ts';
 
 const {modelOptions, selectedModel, isLoadingModels, initModels, connStatus,connMessage, handleModelCheck, chatHistory, inputCommand, isSending, sendCommand} = useChat()
 const { robotStatus, robotMessage, connStatusText, connStatusColor, startAutoPoll, checkRobotHealth } = useRobotHealth({ autoStart: true, interval: 5000 })

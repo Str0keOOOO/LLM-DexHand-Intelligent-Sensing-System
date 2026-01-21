@@ -1,20 +1,18 @@
 import { ref } from 'vue'
-import type { ModelOption, ChatMsg, CheckModelResponse } from '@/composable/interfaces/Inter2LLM.ts'
-import type { ModelVal, ConnStatus } from '@/composable/types/Type2LLM'
+import { storeToRefs } from 'pinia'
+import { useChatStore } from '@/composable/stores/Store2Chat'
 import { getModels, sendChatMsg, checkModelConnect } from '@/composable/api/Chat2LLM'
+import type { ModelOption } from '@/composable/interfaces/Inter2LLM.ts'
+import type { ConnStatus } from '@/composable/types/Type2LLM'
 
-// TODO 思考是否需要拆分，不拆分的时候要简化一下
-export function useChat(defaultModel: ModelOption = { label: '默认模型 (GPT-3.5)', value: 'gpt-3.5-turbo' }) {
-    // 聊天相关（提前声明以便 initModels 使用）
-    const chatHistory = ref<ChatMsg[]>([])
-    const inputCommand = ref<string>('')
-    const internalSending = ref<boolean>(false)
-    const isSending = internalSending
+export function useChat() {
+    const chatStore = useChatStore()
+    const { chatHistory, selectedModel, modelOptions, isLoadingModels } = storeToRefs(chatStore)
 
-    // 模型相关
-    const modelOptions = ref<ModelOption[]>([])
-    const selectedModel = ref<ModelVal>(defaultModel.value)
-    const isLoadingModels = ref(false)
+    const inputCommand = ref('')
+    const isSending = ref(false)
+    const connStatus = ref<ConnStatus>('init')
+    const connMessage = ref('')
 
     function extractModels(res: any): ModelOption[] {
         const data = res?.data ?? res
@@ -22,25 +20,28 @@ export function useChat(defaultModel: ModelOption = { label: '默认模型 (GPT-
         return []
     }
 
-    async function initModels(): Promise<void> {
+    async function initModels() {
         isLoadingModels.value = true
         try {
             const res = await getModels()
             const models = extractModels(res)
+
             if (models.length > 0) {
                 modelOptions.value = models
-                selectedModel.value = (models[0] as any).value ?? defaultModel.value
+
+                const currentExists = models.some((m: any) => m.value === selectedModel.value)
+
+                if (!selectedModel.value || !currentExists) {
+                    selectedModel.value = (models[0] as any).value
+                }
             } else {
-                modelOptions.value = [defaultModel]
-                selectedModel.value = defaultModel.value
+                modelOptions.value = []
             }
         } catch (error) {
             console.error('无法获取模型列表:', error)
-            modelOptions.value = [{ label: '连接失败 (默认)', value: defaultModel.value }]
-            selectedModel.value = defaultModel.value
+            modelOptions.value = [] // 出错时清空列表
         } finally {
             isLoadingModels.value = false
-            // 若历史为空，推送开场白（不新增任何控制变量）
             if (chatHistory.value.length === 0) {
                 chatHistory.value.push({
                     role: 'system',
@@ -50,19 +51,12 @@ export function useChat(defaultModel: ModelOption = { label: '默认模型 (GPT-
         }
     }
 
-    // 模型连接检测
-    const connStatus = ref<ConnStatus>('init')
-    const connMessage = ref<string>('')
-
-    function extractCheck(res: any): CheckModelResponse {
+    function extractCheck(res: any) {
         const data = res?.data ?? res
-        return {
-            success: data?.success,
-            message: data?.message
-        }
+        return { success: data?.success, message: data?.message }
     }
 
-    async function handleModelCheck(modelVal: ModelVal): Promise<boolean> {
+    async function handleModelCheck(modelVal: any): Promise<boolean> {
         if (!modelVal) return false
         const realModelName = (typeof modelVal === 'object' && modelVal !== null) ? (modelVal as any).value : modelVal
 
@@ -93,9 +87,15 @@ export function useChat(defaultModel: ModelOption = { label: '默认模型 (GPT-
     const sendCommand = async () => {
         if (!inputCommand.value) return
 
-        const modelToUse = (typeof selectedModel.value === 'object' && selectedModel.value !== null)
+        // 此时 selectedModel 一定是有值的（或者是空的，需要防守）
+        if (!selectedModel.value) {
+            chatHistory.value.push({ role: 'system', content: '❌ 请先选择一个模型' })
+            return
+        }
+
+        const modelToUse = (typeof selectedModel.value === 'object')
             ? (selectedModel.value as any).value
-            : (selectedModel.value as any)
+            : selectedModel.value
 
         if (connStatus.value === 'fail') {
             chatHistory.value.push({
@@ -139,16 +139,15 @@ export function useChat(defaultModel: ModelOption = { label: '默认模型 (GPT-
     }
 
     return {
-        // 模型
         modelOptions,
         selectedModel,
         isLoadingModels,
         initModels,
-        // 连接检测
+
         connStatus,
         connMessage,
         handleModelCheck,
-        // 聊天
+
         chatHistory,
         inputCommand,
         isSending,

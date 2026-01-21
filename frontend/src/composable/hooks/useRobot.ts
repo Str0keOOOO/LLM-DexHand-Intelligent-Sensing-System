@@ -1,5 +1,3 @@
-// typescript
-// 文件：`src/composable/hooks/useRobotChart.ts`
 import {ref, onMounted, onUnmounted, onBeforeUnmount, computed} from 'vue';
 import * as echarts from 'echarts';
 import type { ChartDataPoint, SeriesDataInterface } from '@/composable/interfaces/Inter2Chart';
@@ -71,7 +69,7 @@ export function useRobotSocket(onData?: (data: any) => void, options?: ConnectOp
     };
 }
 
-export function useRobotChart(options?: {
+export function useRobot(options?: {
     autoInit?: boolean;
     autoStart?: boolean;
     maxPoints?: number;

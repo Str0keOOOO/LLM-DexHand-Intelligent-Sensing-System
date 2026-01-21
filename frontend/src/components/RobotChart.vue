@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { onUnmounted } from 'vue';
-import {useRobotSocket, useRobotChart } from '@/composable/hooks/useRobotChart';
+import {useRobotSocket, useRobot } from '@/composable/hooks/useRobot.ts';
 
-const { chartRef, pushData, disposeChart } = useRobotChart({
+const { chartRef, pushData, disposeChart } = useRobot({
   autoInit: true,
   autoStart: true
 });
 
-// 显式类型 msg: any，使用 hook 返回的 connect/close 管理连接
 const { connect, close } = useRobotSocket((msg: any) => pushData(msg));
 
-// 建立连接（可选地保存返回的 WebSocket）
 connect()
 
 onUnmounted(() => {
