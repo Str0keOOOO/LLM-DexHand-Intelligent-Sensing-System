@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from app.api.endpoints import router as endpoints_router
+from app.api.RT2LLM import router as llm_router
+from app.api.RT2Robot import router as robot_router
 
 api_router = APIRouter()
 
-# ✅ 正确写法（直接包含，由 endpoints.py 自己定义完整路径）：
-api_router.include_router(endpoints_router)
+api_router.include_router(llm_router, prefix="/chat", tags=["chat"])
+api_router.include_router(robot_router, prefix="/ros_ws", tags=["ros_ws"])
