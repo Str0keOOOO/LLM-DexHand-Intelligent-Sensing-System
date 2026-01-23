@@ -32,10 +32,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   return {
-    chatHistory,
-    selectedModel,
-    modelOptions,
-    isLoadingModels,
-    clearHistory
+    chatHistory, // 聊天记录
+    selectedModel, // 当前选中的模型
+    modelOptions, // 模型下拉选项
+    isLoadingModels, // 是否正在加载模型列表
+    clearHistory // 清空聊天记录的方法
   }
 })

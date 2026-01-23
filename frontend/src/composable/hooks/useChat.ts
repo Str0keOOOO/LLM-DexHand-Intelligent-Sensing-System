@@ -1,9 +1,14 @@
-import { ref } from 'vue'
+import {onMounted, ref, watch} from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChatStore } from '@/composable/stores/Store2Chat'
 import { getModels, sendChatMsg, checkModelConnect } from '@/composable/api/Chat2LLM'
-import type { ModelOption } from '@/composable/interfaces/Inter2LLM.ts'
+import type { ModelOption,ChatMsg } from '@/composable/interfaces/Inter2LLM.ts'
 import type { ConnStatus } from '@/composable/types/Type2LLM'
+
+const chatWelcomeMessage: ChatMsg = {
+    role: 'system',
+    content: '你好，我是机器人，请问有什么可以帮忙的？'
+}
 
 export function useChat() {
     const chatStore = useChatStore()
@@ -43,10 +48,7 @@ export function useChat() {
         } finally {
             isLoadingModels.value = false
             if (chatHistory.value.length === 0) {
-                chatHistory.value.push({
-                    role: 'system',
-                    content: '你好，我是机器人，请问有什么可以帮忙的？'
-                })
+                chatHistory.value.push(chatWelcomeMessage)
             }
         }
     }
@@ -87,7 +89,6 @@ export function useChat() {
     const sendCommand = async () => {
         if (!inputCommand.value) return
 
-        // 此时 selectedModel 一定是有值的（或者是空的，需要防守）
         if (!selectedModel.value) {
             chatHistory.value.push({ role: 'system', content: '❌ 请先选择一个模型' })
             return
@@ -138,19 +139,34 @@ export function useChat() {
         }
     }
 
+    const clearChatHistory = (keepWelcome = true) => {
+        chatStore.clearHistory()
+
+        inputCommand.value = ''
+
+        if (keepWelcome) {
+            chatHistory.value.push(chatWelcomeMessage)
+        }
+    }
+
+    onMounted(async () => {
+        await initModels()
+    })
+
+    watch(selectedModel, async (newVal) => {
+        await handleModelCheck(newVal)
+    })
+
     return {
-        modelOptions,
-        selectedModel,
-        isLoadingModels,
-        initModels,
-
-        connStatus,
-        connMessage,
-        handleModelCheck,
-
-        chatHistory,
-        inputCommand,
-        isSending,
-        sendCommand
+        modelOptions, // 模型下拉选项列表
+        selectedModel, // 当前选中的模型值
+        isLoadingModels, // 是否正在加载模型列表
+        connStatus, // 当前模型连接检测状态：init/checking/success/fail
+        connMessage, // 连接检测提示文案
+        chatHistory, // 聊天记录列表
+        inputCommand, // 输入框内容
+        isSending, // 是否正在发送消息
+        sendCommand, // 发送当前输入到后端并把回复写入 chatHistory
+        clearChatHistory // 清空聊天记录
     }
 }

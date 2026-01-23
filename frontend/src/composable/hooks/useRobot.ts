@@ -345,6 +345,10 @@ export function useRobotHealth(options?: { url?: string; interval?: number; auto
                     : '#909399'
     })
 
+    onMounted(async () => {
+        await checkRobotHealth()
+    })
+
     return {
         robotStatus,
         robotMessage,
