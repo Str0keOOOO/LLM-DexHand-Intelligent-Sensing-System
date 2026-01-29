@@ -2,31 +2,28 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 import { useRobot } from '@/composable/hooks/useRobot';
+import type {HistoryData} from "@/composable/interfaces/Inter2Robot.ts";
 
-// 引入 Hook 获取实时数据
 const { robotState } = useRobot();
 
-// --- DOM 引用 ---
 const postureChartRef = ref<HTMLElement | null>(null); // 姿态 (柱状)
 const radarChartRef = ref<HTMLElement | null>(null);   // 受力分布 (雷达)
 const trendChartRef = ref<HTMLElement | null>(null);   // 抓取力趋势 (折线)
 const healthChartRef = ref<HTMLElement | null>(null);  // 电机负载 (热力/柱状)
 
-// --- Chart 实例 ---
 let postureChart: echarts.ECharts | null = null;
 let radarChart: echarts.ECharts | null = null;
 let trendChart: echarts.ECharts | null = null;
 let healthChart: echarts.ECharts | null = null;
 
-// --- 数据历史缓存 (用于折线图) ---
 const MAX_HISTORY_LEN = 50;
-const historyData = {
-  time: [] as string[],
-  leftForce: [] as number[],
-  rightForce: [] as number[],
+
+const historyData: HistoryData = {
+  time: [],
+  leftForce: [],
+  rightForce: [],
 };
 
-// --- 常量定义 ---
 const FINGER_NAMES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
 const MOTOR_NAMES = [
   'TH_DIP', 'TH_MCP', 'TH_ROT',
@@ -36,45 +33,40 @@ const MOTOR_NAMES = [
   'LF_DIP', 'LF_MCP'
 ];
 
-// --- 辅助函数 ---
-
-// 【关键修改】提取关节角度 (改用 Motor 数组，解决 0 值问题)
-// Motor数组结构: [Time, Angle, Enc, Cur, Vel, Err, Imp] * 12 motors
 const extractMotorAngles = (motorArray: number[]) => {
   if (!motorArray || motorArray.length < 84) return new Array(12).fill(0);
-  const angles = [];
+
+  const angles: number[] = [];
   for (let i = 0; i < 12; i++) {
-    // Index 1 is Angle (Degrees)
-    angles.push(Number(motorArray[i * 7 + 1].toFixed(1)));
+    const v = motorArray[i * 7 + 1] ?? 0;
+    angles.push(Number(v.toFixed(1)));
   }
   return angles;
 };
 
-// 提取电机电流
 const extractMotorCurrents = (motorArray: number[]) => {
   if (!motorArray || motorArray.length < 84) return new Array(12).fill(0);
-  const currents = [];
+
+  const currents: number[] = [];
   for (let i = 0; i < 12; i++) {
-    // Index 3 is Current
-    currents.push(Math.abs(Number(motorArray[i * 7 + 3].toFixed(1))));
+    const v = motorArray[i * 7 + 3] ?? 0;
+    currents.push(Math.abs(Number(v.toFixed(1))));
   }
   return currents;
 };
 
-// 提取指尖法向力
 const extractFingerForces = (touchArray: number[]) => {
   if (!touchArray || touchArray.length < 40) return [0, 0, 0, 0, 0];
-  const forces = [];
+
+  const forces: number[] = [];
   for (let i = 0; i < 5; i++) {
-    // Index 1 is Normal Force
-    forces.push(Number(touchArray[i * 8 + 1].toFixed(2)));
+    const v = touchArray[i * 8 + 1] ?? 0;
+    forces.push(Number(v.toFixed(2)));
   }
   return forces;
 };
 
-// --- 图表初始化 ---
 const initCharts = () => {
-  // 1. 姿态图 (Posture)
   if (postureChartRef.value) {
     postureChart = echarts.init(postureChartRef.value);
     postureChart.setOption({
@@ -95,7 +87,6 @@ const initCharts = () => {
     });
   }
 
-  // 2. 雷达图
   if (radarChartRef.value) {
     radarChart = echarts.init(radarChartRef.value);
     radarChart.setOption({
@@ -114,7 +105,6 @@ const initCharts = () => {
     });
   }
 
-  // 3. 趋势图
   if (trendChartRef.value) {
     trendChart = echarts.init(trendChartRef.value);
     trendChart.setOption({
@@ -131,7 +121,6 @@ const initCharts = () => {
     });
   }
 
-  // 4. 电机电流
   if (healthChartRef.value) {
     healthChart = echarts.init(healthChartRef.value);
     healthChart.setOption({
@@ -149,21 +138,16 @@ const initCharts = () => {
   }
 };
 
-// --- 数据更新逻辑 ---
 watch(() => robotState.value, (newVal) => {
   if (!newVal || !postureChart) return;
 
-  // 1. 准备数据 (改用 Motor 数组取角度)
   const leftAngles = extractMotorAngles(newVal.left.motor);
   const rightAngles = extractMotorAngles(newVal.right.motor);
-
   const leftForces = extractFingerForces(newVal.left.touch);
   const rightForces = extractFingerForces(newVal.right.touch);
-
   const leftCurrents = extractMotorCurrents(newVal.left.motor);
   const rightCurrents = extractMotorCurrents(newVal.right.motor);
 
-  // 2. 更新图表
   postureChart.setOption({ series: [{ data: leftAngles }, { data: rightAngles }] });
 
   radarChart?.setOption({
@@ -175,7 +159,6 @@ watch(() => robotState.value, (newVal) => {
 
   healthChart?.setOption({ series: [{ data: leftCurrents }, { data: rightCurrents }] });
 
-  // 3. 更新趋势
   const nowStr = new Date().toLocaleTimeString();
   const leftTotal = leftForces.reduce((a, b) => a + b, 0);
   const rightTotal = rightForces.reduce((a, b) => a + b, 0);
@@ -197,7 +180,6 @@ watch(() => robotState.value, (newVal) => {
 
 }, { deep: true });
 
-// --- 生命周期 ---
 const resizeHandler = () => {
   postureChart?.resize(); radarChart?.resize(); trendChart?.resize(); healthChart?.resize();
 };

@@ -1,8 +1,6 @@
-// frontend/src/composable/hooks/useRobot.ts
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { RobotState } from '@/composable/interfaces/Inter2Robot';
 
-// 全局单例状态，保证切换页面数据不丢失（可选，也可放在组件内）
 const robotState = ref<RobotState>({
     left: { joints: {}, touch: [], motor: [] },
     right: { joints: {}, touch: [], motor: [] },
@@ -14,15 +12,20 @@ let ws: WebSocket | null = null;
 let reconnectTimer: number | undefined = undefined;
 
 export function useRobot() {
+    const connStatusText = computed(() => (isConnected.value ? '已连接' : '断开'));
+    const connStatusColor = computed(() => (isConnected.value ? '#22c55e' : '#f56c6c'));
+
+    const formattedTime = computed(() => {
+        const ts = robotState.value.timestamp;
+        if (!ts) return '--:--:--';
+        const date = new Date(ts * 1000);
+        return date.toLocaleTimeString('en-GB');
+    });
 
     const connectWebSocket = () => {
         if (ws) return;
 
-        // 自动判断 WS 地址 (适配 Vite Proxy 或直连)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // 如果你在 vite.config.ts 配置了 proxy '/api' -> 'http://localhost:8000'
-        // 那么这里应该是 ws://localhost:5173/api/robot-data
-        // 如果是直连后端，请改为 `ws://localhost:8000/api/robot-data`
         const wsUrl = `${protocol}//localhost:8000/api/ros_ws/robot-data`;
 
         ws = new WebSocket(wsUrl);
@@ -36,11 +39,10 @@ export function useRobot() {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // 简单校验数据完整性
                 if (data.left && data.right) {
                     robotState.value = data;
                 }
-                console.log(data)
+                console.log(data);
             } catch (e) {
                 console.error('Parse Error:', e);
             }
@@ -72,15 +74,16 @@ export function useRobot() {
     });
 
     onUnmounted(() => {
-        // 视需求决定是否在组件卸载时断开，
-        // 如果希望后台一直保持连接，可以注释掉下面这行
-        // closeWebSocket();
+        closeWebSocket();
     });
 
     return {
         robotState,
         isConnected,
+        connStatusText,
+        connStatusColor,
+        formattedTime,
         connectWebSocket,
-        closeWebSocket
+        closeWebSocket,
     };
 }

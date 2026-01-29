@@ -1,95 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, reactive } from 'vue'
+import { ref } from 'vue'
 import RobotChart from '@/components/RobotChart.vue'
+import RobotManualControl from '@/components/RobotManualControl.vue'
 import {
   ChatLineRound, TrendCharts, Cpu, CircleCheck, CircleClose, Loading,
-  Delete, UserFilled, Service, Timer, Odometer, Connection, Setting, Operation
+  Delete, UserFilled, Service, Timer, Odometer, Connection, Operation
 } from "@element-plus/icons-vue"
 
 import { useChat } from '@/composable/hooks/useChat.ts'
 import { useRobot } from '@/composable/hooks/useRobot.ts'
-// 引入新写的 API
-import { sendControlCommand } from '@/composable/api/Chat2Robot.ts'
-import { ElMessage } from 'element-plus'
 
-// --- Chat & Robot Hooks ---
-const {
-  modelOptions, selectedModel, isLoadingModels,
-  connStatus, connMessage, chatHistory, inputCommand, isSending,
-  sendCommand, clearChatHistory
-} = useChat()
 
-const { isConnected, robotState } = useRobot()
+const {modelOptions, selectedModel, isLoadingModels, connStatus, connMessage, chatHistory, inputCommand, isSending, sendCommand, clearChatHistory} = useChat()
+const { isConnected, robotState, connStatusText, connStatusColor, formattedTime, } = useRobot()
 
-const connStatusText = computed(() => isConnected.value ? '已连接' : '断开')
-const connStatusColor = computed(() => isConnected.value ? '#22c55e' : '#f56c6c')
 
-const formattedTime = computed(() => {
-  if (!robotState.value.timestamp) return '--:--:--'
-  const date = new Date(robotState.value.timestamp * 1000)
-  return date.toLocaleTimeString('en-GB')
-})
-
-// --- 新增：手动控制逻辑 ---
 const controlDialogVisible = ref(false)
-const controlLoading = ref(false)
 
-// 控制表单数据
-const controlForm = reactive({
-  hand: 'right' as 'left' | 'right',
-  // 12个关节的初始角度
-  joints: {
-    th_dip: 0, th_mcp: 0, th_rot: 0,
-    ff_spr: 0, ff_dip: 0, ff_mcp: 0,
-    mf_dip: 0, mf_mcp: 0,
-    rf_dip: 0, rf_mcp: 0,
-    lf_dip: 0, lf_mcp: 0
-  }
-})
-
-// 关节分组定义（用于界面渲染）
-const fingerGroups = [
-  { name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip'] },
-  { name: 'Index (食指)', joints: ['ff_spr', 'ff_mcp', 'ff_dip'] },
-  { name: 'Middle (中指)', joints: ['mf_mcp', 'mf_dip'] },
-  { name: 'Ring (无名指)', joints: ['rf_mcp', 'rf_dip'] },
-  { name: 'Pinky (小指)', joints: ['lf_mcp', 'lf_dip'] },
-]
-
-// 发送控制指令
-const handleSendControl = async () => {
-  controlLoading.value = true
-  try {
-    // 构造发送给后端的 payload
-    // 需要加上前缀 (l_ 或 r_) 以匹配 URDF/后端逻辑
-    const prefix = controlForm.hand === 'left' ? 'l_' : 'r_'
-    const jointsPayload: Record<string, number> = {}
-
-    for (const [key, val] of Object.entries(controlForm.joints)) {
-      jointsPayload[`${prefix}${key}`] = val
-    }
-
-    await sendControlCommand({
-      hand: controlForm.hand,
-      joints: jointsPayload
-    })
-
-    ElMessage.success(`指令已发送至 ${controlForm.hand === 'left' ? '左手' : '右手'}`)
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('发送失败，请检查连接')
-  } finally {
-    controlLoading.value = false
-  }
-}
-
-// 重置滑块
-const resetSliders = () => {
-  for (const key in controlForm.joints) {
-    (controlForm.joints as any)[key] = 0
-  }
-  handleSendControl() // 立即发送重置指令
-}
 </script>
 
 <template>
@@ -221,40 +148,9 @@ const resetSliders = () => {
       </el-col>
     </el-row>
 
-    <el-dialog v-model="controlDialogVisible" title="手动关节控制 (Manual Control)" width="500px">
-      <div class="control-panel">
-        <div class="panel-section">
-          <span class="label">目标手部：</span>
-          <el-radio-group v-model="controlForm.hand" size="small">
-            <el-radio-button label="right">Right Hand (右手)</el-radio-button>
-            <el-radio-button label="left">Left Hand (左手)</el-radio-button>
-          </el-radio-group>
-        </div>
-
-        <div class="sliders-container">
-          <div v-for="group in fingerGroups" :key="group.name" class="finger-group">
-            <div class="group-title">{{ group.name }}</div>
-            <div v-for="joint in group.joints" :key="joint" class="slider-item">
-              <span class="joint-name">{{ joint }}</span>
-              <el-slider
-                  v-model="(controlForm.joints as any)[joint]"
-                  :min="0" :max="180"
-                  :step="1"
-                  show-input
-                  size="small"
-                  class="flex-slider"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="resetSliders">重置归零</el-button>
-          <el-button type="primary" @click="handleSendControl" :loading="controlLoading">立即发送</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <RobotManualControl
+        v-model="controlDialogVisible"
+    />
   </div>
 </template>
 

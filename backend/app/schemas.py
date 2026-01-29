@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
 # --- 1. 聊天相关 ---
@@ -44,3 +44,8 @@ class RobotStatus(BaseModel):
     fingers: List[float]
     status: Optional[str] = None
     error: Optional[str] = None
+
+
+class ControlCommand(BaseModel):
+    hand: str
+    joints: Dict[str, float]
