@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, FastAPI, Request, HTTPException
-from pydantic import BaseModel
 
 from app.ros.bridge import ROSBridgeManager
 from app.schemas import ControlCommand
@@ -12,13 +11,17 @@ from app.schemas import ControlCommand
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    mgr = getattr(app.state, "ros_bridge", None)
-    if mgr is None:
-        mgr = ROSBridgeManager()
-        app.state.ros_bridge = mgr
-
+    # 启动时：初始化 ROS Bridge
+    mgr = ROSBridgeManager()
     mgr.start()
+    # 挂载到 app.state 供全局访问
+    app.state.ros_bridge = mgr
+    print("✅ ROS Bridge Manager started and attached to app.state")
+    
     yield
+    
+    # 关闭时：可以在这里添加清理逻辑
+    print("🛑 Shutting down...")
 
 
 router = APIRouter(lifespan=lifespan)

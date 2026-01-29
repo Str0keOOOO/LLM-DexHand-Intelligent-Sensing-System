@@ -1,43 +1,74 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-import app.ros.bridge as ros_bridge
-from app.schemas import ChatRequest, ChatResponse, CheckModelRequest, CheckModelResponse, ModelListResponse, ModelOption
+import json
+import re
+from fastapi import APIRouter, Request
+from app.schemas import ChatRequest, ChatResponse, CheckModelRequest, CheckModelResponse, ModelListResponse, ModelOption, ControlCommand
 from app.llm.client import ask_ai, validate_model, AVAILABLE_MODELS
+from app.ros.bridge import ROSBridgeManager
 
 router = APIRouter()
 
 
-@router.post("/send", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    print(f"收到聊天请求，消息: {req.message}，模型: {req.model}")
+def extract_json(text: str):
+    """尝试从 LLM 回复中提取 JSON 块"""
+    try:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        return None
+    except (TypeError, json.JSONDecodeError, re.error):
+        return None
 
+
+@router.post("/send", response_model=ChatResponse)
+async def chat(req: ChatRequest, request: Request):
+    bridge: ROSBridgeManager | None = getattr(request.app.state, "ros_bridge", None)
     context_str = ""
-    # if ros_bridge.bridge_node and ros_bridge.bridge_node.latest_state:
-    #     payload = ros_bridge.bridge_node.latest_state.get("payload")
-    #     if payload:
-    #         context_str = f"\n(Current Robot State: {payload})"
+    if bridge:
+        state = bridge.get_latest_state()
+        simple_state = {k: v.get("joints", {}) for k, v in state.items() if k in ["left", "right"]}
+        context_str = f"\n[Current Robot Joint State]: {json.dumps(simple_state)}"
+
+    system_prompt = (
+        "You are an intelligent robot assistant for DexHand. "
+        "You can control the robot by outputting a JSON command."
+        "\n\nRULES:"
+        "\n1. If the user asks for a physical action (e.g., 'open hand', 'grasp'), output a JSON object with 'reply' and 'command' fields."
+        "\n2. The 'command' field must have: 'hand' ('left' or 'right') and 'joints' (a dictionary of joint_name: angle)."
+        "\n3. If no action is needed, 'command' should be null."
+        '\n4. Valid format example: {{"reply": "Opening the hand now.", "command": {{"hand": "right", "joints": {{"thumb_flexion": 0.0, "index_flexion": 0.0}}}}}}'
+        "\n5. Always ensure the JSON is valid."
+    )
+
+    print(f"Chat Request: {req.message}")
 
     try:
-        reply_text, used_model = ask_ai(
-            text=req.message + context_str, system_prompt="You are a helpful robot assistant. You can control the robotic hand via specific commands.", model_name=req.model
-        )
+        raw_response, used_model = ask_ai(text=req.message + context_str, system_prompt=system_prompt, model_name=req.model)
+
+        json_data = extract_json(raw_response)
+
+        control_cmd = None
+        reply_text = raw_response
+
+        if json_data and isinstance(json_data, dict):
+            reply_text = json_data.get("reply", raw_response)
+            cmd_data = json_data.get("command")
+
+            if cmd_data:
+                try:
+                    control_cmd = ControlCommand(**cmd_data)
+                except Exception as e:
+                    reply_text += f"\n(Internal Error: Invalid command format generated): {str(e)}"
+
     except Exception as e:
         reply_text = f"Error calling AI: {str(e)}"
         used_model = "error"
+        control_cmd = None
 
-    action_code = None
-
-    # if "grasp" in reply_text.lower() or "抓" in reply_text:
-    #     action_code = "grasp"
-    # elif "open" in reply_text.lower() or "松" in reply_text:
-    #     action_code = "open"
-    # elif "reset" in reply_text.lower():
-    #     action_code = "reset"
- 
+    # 5. 返回结果
     return ChatResponse(
         reply=reply_text,
         model_name=used_model,
-        action_code=action_code,
+        control_command=control_cmd,
     )
 
 

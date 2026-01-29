@@ -1,9 +1,9 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import type { RobotState } from '@/composable/interfaces/Inter2Robot';
+import {ref, computed, onMounted, onUnmounted} from 'vue';
+import type {RobotState} from '@/composable/interfaces/Inter2Robot';
 
 const robotState = ref<RobotState>({
-    left: { joints: {}, touch: [], motor: [] },
-    right: { joints: {}, touch: [], motor: [] },
+    left: {joints: {}, touch: [], motor: []},
+    right: {joints: {}, touch: [], motor: []},
     timestamp: 0,
 });
 
@@ -42,7 +42,6 @@ export function useRobot() {
                 if (data.left && data.right) {
                     robotState.value = data;
                 }
-                console.log(data);
             } catch (e) {
                 console.error('Parse Error:', e);
             }

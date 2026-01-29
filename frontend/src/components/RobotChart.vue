@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import {ref, onMounted, onUnmounted, watch} from 'vue';
 import * as echarts from 'echarts';
-import { useRobot } from '@/composable/hooks/useRobot';
+import {useRobot} from '@/composable/hooks/useRobot';
 import type {HistoryData} from "@/composable/interfaces/Inter2Robot.ts";
 
-const { robotState } = useRobot();
+const {robotState} = useRobot();
 
 const postureChartRef = ref<HTMLElement | null>(null); // 姿态 (柱状)
 const radarChartRef = ref<HTMLElement | null>(null);   // 受力分布 (雷达)
@@ -70,19 +70,19 @@ const initCharts = () => {
   if (postureChartRef.value) {
     postureChart = echarts.init(postureChartRef.value);
     postureChart.setOption({
-      title: { text: 'Joint Angles (Deg)', left: 'center', textStyle: { fontSize: 14 } },
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { bottom: 0, data: ['Left Hand', 'Right Hand'] },
-      grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+      title: {text: 'Joint Angles (Deg)', left: 'center', textStyle: {fontSize: 14}},
+      tooltip: {trigger: 'axis', axisPointer: {type: 'shadow'}},
+      legend: {bottom: 0, data: ['Left Hand', 'Right Hand']},
+      grid: {left: '3%', right: '4%', bottom: '10%', containLabel: true},
       xAxis: {
         type: 'category',
         data: MOTOR_NAMES,
-        axisLabel: { interval: 0, rotate: 45, fontSize: 10 }
+        axisLabel: {interval: 0, rotate: 45, fontSize: 10}
       },
-      yAxis: { type: 'value', max: 120 }, // 固定最大值防止跳动
+      yAxis: {type: 'value', max: 120}, // 固定最大值防止跳动
       series: [
-        { name: 'Left Hand', type: 'bar', itemStyle: { color: '#3b82f6' }, data: [] },
-        { name: 'Right Hand', type: 'bar', itemStyle: { color: '#8b5cf6' }, data: [] }
+        {name: 'Left Hand', type: 'bar', itemStyle: {color: '#3b82f6'}, data: []},
+        {name: 'Right Hand', type: 'bar', itemStyle: {color: '#8b5cf6'}, data: []}
       ]
     });
   }
@@ -90,16 +90,16 @@ const initCharts = () => {
   if (radarChartRef.value) {
     radarChart = echarts.init(radarChartRef.value);
     radarChart.setOption({
-      title: { text: 'Fingertip Forces (N)', left: 'center', textStyle: { fontSize: 14 } },
+      title: {text: 'Fingertip Forces (N)', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {},
       radar: {
-        indicator: FINGER_NAMES.map(name => ({ name, max: 5.0 })), // 最大 5N
+        indicator: FINGER_NAMES.map(name => ({name, max: 5.0})), // 最大 5N
       },
       series: [{
         type: 'radar',
         data: [
-          { value: [0,0,0,0,0], name: 'Left Hand', itemStyle: { color: '#3b82f6' } },
-          { value: [0,0,0,0,0], name: 'Right Hand', itemStyle: { color: '#8b5cf6' } }
+          {value: [0, 0, 0, 0, 0], name: 'Left Hand', itemStyle: {color: '#3b82f6'}},
+          {value: [0, 0, 0, 0, 0], name: 'Right Hand', itemStyle: {color: '#8b5cf6'}}
         ]
       }]
     });
@@ -108,15 +108,15 @@ const initCharts = () => {
   if (trendChartRef.value) {
     trendChart = echarts.init(trendChartRef.value);
     trendChart.setOption({
-      title: { text: 'Total Force Trend', left: 'center', textStyle: { fontSize: 14 } },
-      tooltip: { trigger: 'axis' },
-      legend: { bottom: 0, data: ['Left Total', 'Right Total'] },
-      grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: [] },
-      yAxis: { type: 'value' },
+      title: {text: 'Total Force Trend', left: 'center', textStyle: {fontSize: 14}},
+      tooltip: {trigger: 'axis'},
+      legend: {bottom: 0, data: ['Left Total', 'Right Total']},
+      grid: {left: '3%', right: '4%', bottom: '10%', containLabel: true},
+      xAxis: {type: 'category', boundaryGap: false, data: []},
+      yAxis: {type: 'value'},
       series: [
-        { name: 'Left Total', type: 'line', smooth: true, areaStyle: { opacity: 0.2 }, data: [] },
-        { name: 'Right Total', type: 'line', smooth: true, areaStyle: { opacity: 0.2 }, data: [] }
+        {name: 'Left Total', type: 'line', smooth: true, areaStyle: {opacity: 0.2}, data: []},
+        {name: 'Right Total', type: 'line', smooth: true, areaStyle: {opacity: 0.2}, data: []}
       ]
     });
   }
@@ -124,15 +124,15 @@ const initCharts = () => {
   if (healthChartRef.value) {
     healthChart = echarts.init(healthChartRef.value);
     healthChart.setOption({
-      title: { text: 'Motor Load (mA)', left: 'center', textStyle: { fontSize: 14 } },
-      tooltip: { trigger: 'axis' },
-      legend: { bottom: 0, data: ['Left Hand', 'Right Hand'] },
-      grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-      xAxis: { type: 'value' },
-      yAxis: { type: 'category', data: MOTOR_NAMES, inverse: true },
+      title: {text: 'Motor Load (mA)', left: 'center', textStyle: {fontSize: 14}},
+      tooltip: {trigger: 'axis'},
+      legend: {bottom: 0, data: ['Left Hand', 'Right Hand']},
+      grid: {left: '3%', right: '4%', bottom: '10%', containLabel: true},
+      xAxis: {type: 'value'},
+      yAxis: {type: 'category', data: MOTOR_NAMES, inverse: true},
       series: [
-        { name: 'Left Hand', type: 'bar', stack: null, itemStyle: { color: '#60a5fa' }, data: [] },
-        { name: 'Right Hand', type: 'bar', stack: null, itemStyle: { color: '#a78bfa' }, data: [] }
+        {name: 'Left Hand', type: 'bar', stack: null, itemStyle: {color: '#60a5fa'}, data: []},
+        {name: 'Right Hand', type: 'bar', stack: null, itemStyle: {color: '#a78bfa'}, data: []}
       ]
     });
   }
@@ -148,16 +148,18 @@ watch(() => robotState.value, (newVal) => {
   const leftCurrents = extractMotorCurrents(newVal.left.motor);
   const rightCurrents = extractMotorCurrents(newVal.right.motor);
 
-  postureChart.setOption({ series: [{ data: leftAngles }, { data: rightAngles }] });
+  postureChart.setOption({series: [{data: leftAngles}, {data: rightAngles}]});
 
   radarChart?.setOption({
-    series: [{ data: [
-        { value: leftForces, name: 'Left Hand' },
-        { value: rightForces, name: 'Right Hand' }
-      ]}]
+    series: [{
+      data: [
+        {value: leftForces, name: 'Left Hand'},
+        {value: rightForces, name: 'Right Hand'}
+      ]
+    }]
   });
 
-  healthChart?.setOption({ series: [{ data: leftCurrents }, { data: rightCurrents }] });
+  healthChart?.setOption({series: [{data: leftCurrents}, {data: rightCurrents}]});
 
   const nowStr = new Date().toLocaleTimeString();
   const leftTotal = leftForces.reduce((a, b) => a + b, 0);
@@ -174,35 +176,79 @@ watch(() => robotState.value, (newVal) => {
   }
 
   trendChart?.setOption({
-    xAxis: { data: historyData.time },
-    series: [{ data: historyData.leftForce }, { data: historyData.rightForce }]
+    xAxis: {data: historyData.time},
+    series: [{data: historyData.leftForce}, {data: historyData.rightForce}]
   });
 
-}, { deep: true });
+}, {deep: true});
 
 const resizeHandler = () => {
-  postureChart?.resize(); radarChart?.resize(); trendChart?.resize(); healthChart?.resize();
+  postureChart?.resize();
+  radarChart?.resize();
+  trendChart?.resize();
+  healthChart?.resize();
 };
-onMounted(() => { initCharts(); window.addEventListener('resize', resizeHandler); });
-onUnmounted(() => { window.removeEventListener('resize', resizeHandler); postureChart?.dispose(); });
+onMounted(() => {
+  initCharts();
+  window.addEventListener('resize', resizeHandler);
+});
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeHandler);
+  postureChart?.dispose();
+});
 </script>
 
 <template>
   <div class="charts-dashboard">
     <div class="chart-row">
-      <div class="chart-card"><div ref="radarChartRef" class="chart-content"></div></div>
-      <div class="chart-card"><div ref="postureChartRef" class="chart-content"></div></div>
+      <div class="chart-card">
+        <div ref="radarChartRef" class="chart-content"></div>
+      </div>
+      <div class="chart-card">
+        <div ref="postureChartRef" class="chart-content"></div>
+      </div>
     </div>
     <div class="chart-row">
-      <div class="chart-card"><div ref="trendChartRef" class="chart-content"></div></div>
-      <div class="chart-card"><div ref="healthChartRef" class="chart-content"></div></div>
+      <div class="chart-card">
+        <div ref="trendChartRef" class="chart-content"></div>
+      </div>
+      <div class="chart-card">
+        <div ref="healthChartRef" class="chart-content"></div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.charts-dashboard { display: flex; flex-direction: column; gap: 16px; width: 100%; height: 100%; }
-.chart-row { display: flex; gap: 16px; flex: 1; min-height: 280px; }
-.chart-card { flex: 1; background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; display: flex; flex-direction: column; }
-.chart-content { flex: 1; width: 100%; min-height: 0; }
+.charts-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+}
+
+.chart-row {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 280px;
+}
+
+.chart-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-content {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
 </style>

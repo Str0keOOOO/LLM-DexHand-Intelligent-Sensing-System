@@ -23,7 +23,7 @@ def get_llm_model(model_name: str):
             api_key=os.getenv("SILICONFLOW_API_KEY"),
             base_url=os.getenv("SILICONFLOW_BASE_URL"),
             temperature=0.7,
-            timeout=10.0,
+            timeout=60.0,
             max_retries=2,
         )
 
@@ -33,7 +33,6 @@ def ask_ai(text: str, system_prompt: str, model_name: str = None) -> tuple[str, 
     通用 AI 调用函数
     Returns: (ai_reply_text, used_model_name)
     """
-    # TODO 优化这一部分逻辑
     if not model_name:
         if AVAILABLE_MODELS:
             default_model = AVAILABLE_MODELS[0]["value"]

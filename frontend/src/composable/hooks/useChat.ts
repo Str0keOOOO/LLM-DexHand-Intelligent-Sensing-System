@@ -1,9 +1,10 @@
-import {onMounted, ref, watch} from 'vue'
-import { storeToRefs } from 'pinia'
-import { useChatStore } from '@/composable/stores/Store2Chat'
-import { getModels, sendChatMsg, checkModelConnect } from '@/composable/api/Chat2LLM'
-import type { ModelOption,ChatMsg } from '@/composable/interfaces/Inter2LLM.ts'
-import type { ConnStatus } from '@/composable/types/Type2LLM'
+import {onMounted, ref, watch, computed} from 'vue'
+import {storeToRefs} from 'pinia'
+import {useChatStore} from '@/composable/stores/Store2Chat'
+import {getModels, sendChatMsg, checkModelConnect} from '@/composable/api/Chat2LLM'
+import {sendControlCommand as apiSendControl} from '@/composable/api/Chat2Robot'
+import type {ModelOption, ChatMsg} from '@/composable/interfaces/Inter2LLM.ts'
+import type {ConnStatus, ControlRespPayload} from '@/composable/types/Type2LLM'
 
 const chatWelcomeMessage: ChatMsg = {
     role: 'system',
@@ -12,16 +13,36 @@ const chatWelcomeMessage: ChatMsg = {
 
 export function useChat() {
     const chatStore = useChatStore()
-    const { chatHistory, selectedModel, modelOptions, isLoadingModels } = storeToRefs(chatStore)
+    const {
+        chatHistory,
+        selectedModel: selectedModelRaw,
+        modelOptions,
+        isLoadingModels
+    } = storeToRefs(chatStore)
 
     const inputCommand = ref('')
     const isSending = ref(false)
     const connStatus = ref<ConnStatus>('init')
     const connMessage = ref('')
 
+    const selectedModel = computed<string>({
+        get() {
+            const v = selectedModelRaw.value as unknown
+            if (typeof v === 'string') return v
+            if (v && typeof v === 'object' && 'value' in (v as any) && typeof (v as any).value === 'string') {
+                return (v as any).value
+            }
+            return ''
+        },
+        set(next: string) {
+            ;(selectedModelRaw as any).value = next
+        }
+    })
+
     function extractModels(res: any): ModelOption[] {
         const data = res?.data ?? res
         if (Array.isArray(data?.models)) return data.models
+        if (Array.isArray(res?.models)) return res.models
         return []
     }
 
@@ -34,33 +55,35 @@ export function useChat() {
             if (models.length > 0) {
                 modelOptions.value = models
 
-                const currentExists = models.some((m: any) => m.value === selectedModel.value)
-
-                if (!selectedModel.value || !currentExists) {
-                    selectedModel.value = (models[0] as any).value
+                const current = selectedModel.value
+                const currentExists = models.some((m: any) => m.value === current)
+                if (!current || !currentExists) {
+                    selectedModel.value = String((models[0] as any).value ?? '')
                 }
             } else {
                 modelOptions.value = []
             }
         } catch (error) {
             console.error('无法获取模型列表:', error)
-            modelOptions.value = [] // 出错时清空列表
+            modelOptions.value = []
         } finally {
             isLoadingModels.value = false
-            if (chatHistory.value.length === 0) {
-                chatHistory.value.push(chatWelcomeMessage)
-            }
+            if (chatHistory.value.length === 0) chatHistory.value.push(chatWelcomeMessage)
         }
     }
 
     function extractCheck(res: any) {
         const data = res?.data ?? res
-        return { success: data?.success, message: data?.message }
+        return {success: data?.success, message: data?.message}
     }
 
     async function handleModelCheck(modelVal: any): Promise<boolean> {
-        if (!modelVal) return false
-        const realModelName = (typeof modelVal === 'object' && modelVal !== null) ? (modelVal as any).value : modelVal
+        const realModelName =
+            typeof modelVal === 'string'
+                ? modelVal
+                : (modelVal && typeof modelVal === 'object' ? (modelVal as any).value : '')
+
+        if (!realModelName) return false
 
         connStatus.value = 'checking'
         connMessage.value = '连接检测中...'
@@ -77,7 +100,7 @@ export function useChat() {
                 connMessage.value = payload.message || '连接失败'
                 return false
             }
-        } catch (e) {
+        } catch {
             connStatus.value = 'fail'
             connMessage.value = '网络错误/后端不可达'
             return false
@@ -89,24 +112,21 @@ export function useChat() {
     const sendCommand = async () => {
         if (!inputCommand.value) return
 
-        if (!selectedModel.value) {
-            chatHistory.value.push({ role: 'system', content: '❌ 请先选择一个模型' })
+        const modelToUse = selectedModel.value
+        if (!modelToUse) {
+            chatHistory.value.push({role: 'system', content: '❌ 请先选择一个模型'})
             return
         }
-
-        const modelToUse = (typeof selectedModel.value === 'object')
-            ? (selectedModel.value as any).value
-            : selectedModel.value
 
         if (connStatus.value === 'fail') {
             chatHistory.value.push({
                 role: 'system',
-                content: `❌ 发送失败：模型 [${modelToUse}] 未连接成功。`
+                content: `❌ 发送失败：模型 \[${modelToUse}\] 未连接成功。`
             })
             return
         }
 
-        chatHistory.value.push({ role: 'user', content: inputCommand.value })
+        chatHistory.value.push({role: 'user', content: inputCommand.value})
         const textToSend = inputCommand.value
         inputCommand.value = ''
         isSending.value = true
@@ -115,9 +135,9 @@ export function useChat() {
             const res = await sendChatMsg(textToSend, modelToUse)
             const payload = normalize(res)
 
-            const reply = payload.reply ?? payload.data?.reply ?? String(payload.reply ?? '')
-            const modelName = payload.model_name ?? payload.model ?? ''
-            const actionCode = payload.action_code ?? payload.actionCode ?? null
+            const reply = String(payload?.reply ?? payload?.data?.reply ?? '')
+            const modelName = String(payload?.model_name ?? payload?.model ?? '')
+            const controlCmd = payload?.control_command ?? payload?.controlCommand ?? null
 
             chatHistory.value.push({
                 role: 'system',
@@ -125,15 +145,48 @@ export function useChat() {
                 model: modelName
             })
 
-            if (actionCode) {
+            if (controlCmd) {
+                const jointsObj = (controlCmd?.joints ?? {}) as Record<string, unknown>
+                const cmdSummary = `手部: ${controlCmd.hand === 'left' ? '左手' : '右手'}, 关节数: ${Object.keys(jointsObj).length}`
+                const cmdDetail = JSON.stringify(jointsObj, null, 2)
+
                 chatHistory.value.push({
                     role: 'system',
-                    content: `[执行层] ${actionCode}`,
-                    model: 'Robot Core'
+                    content: `🤖 \[识别到指令\] ${cmdSummary}\n\`\`\`json\n${cmdDetail}\n\`\`\``,
+                    model: 'Controller'
                 })
+
+                chatHistory.value.push({role: 'system', content: '⏳ 正在下发指令到硬件层...', model: 'System'})
+
+                try {
+                    const ctrlRes = await apiSendControl(controlCmd)
+                    const ctrlPayload = normalize(ctrlRes) as ControlRespPayload
+
+                    const sentTo =
+                        ctrlPayload?.sent_to ?? ctrlPayload?.sentTo ?? ctrlPayload?.result?.sent_to ?? 'Unknown'
+
+                    chatHistory.value.push({
+                        role: 'system',
+                        content: `✅ 指令执行成功 \(Sent to ${sentTo}\)`,
+                        model: 'System'
+                    })
+                } catch (err: any) {
+                    const msg =
+                        err?.response?.data?.message ??
+                        err?.response?.data?.error ??
+                        err?.message ??
+                        String(err ?? 'Unknown error')
+
+                    chatHistory.value.push({
+                        role: 'system',
+                        content: `❌ 指令执行失败: ${msg}`,
+                        model: 'System'
+                    })
+                }
             }
         } catch (error) {
-            chatHistory.value.push({ role: 'system', content: '❌ 错误：请求超时或服务异常' })
+            chatHistory.value.push({role: 'system', content: '❌ 错误：请求超时或服务异常'})
+            console.error(error)
         } finally {
             isSending.value = false
         }
@@ -141,12 +194,8 @@ export function useChat() {
 
     const clearChatHistory = (keepWelcome = true) => {
         chatStore.clearHistory()
-
         inputCommand.value = ''
-
-        if (keepWelcome) {
-            chatHistory.value.push(chatWelcomeMessage)
-        }
+        if (keepWelcome) chatHistory.value.push(chatWelcomeMessage)
     }
 
     onMounted(async () => {
@@ -158,15 +207,15 @@ export function useChat() {
     })
 
     return {
-        modelOptions, // 模型下拉选项列表
-        selectedModel, // 当前选中的模型值
-        isLoadingModels, // 是否正在加载模型列表
-        connStatus, // 当前模型连接检测状态：init/checking/success/fail
-        connMessage, // 连接检测提示文案
-        chatHistory, // 聊天记录列表
-        inputCommand, // 输入框内容
-        isSending, // 是否正在发送消息
-        sendCommand, // 发送当前输入到后端并把回复写入 chatHistory
-        clearChatHistory // 清空聊天记录
+        modelOptions,
+        selectedModel,
+        isLoadingModels,
+        connStatus,
+        connMessage,
+        chatHistory,
+        inputCommand,
+        isSending,
+        sendCommand,
+        clearChatHistory
     }
 }
