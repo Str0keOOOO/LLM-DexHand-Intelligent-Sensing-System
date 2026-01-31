@@ -28,9 +28,9 @@ def get_llm_model(model_name: str):
         )
 
 
-def ask_ai(text: str, system_prompt: str, model_name: str = None) -> tuple[str, str]:
+async def ask_ai(text: str, system_prompt: str, model_name: str = None) -> tuple[str, str]:
     """
-    通用 AI 调用函数
+    通用 AI 调用函数 (异步版本)
     Returns: (ai_reply_text, used_model_name)
     """
     if not model_name:
@@ -45,7 +45,9 @@ def ask_ai(text: str, system_prompt: str, model_name: str = None) -> tuple[str, 
         llm = get_llm_model(target_model)
         prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("user", "{input}")])
         chain = prompt | llm | StrOutputParser()
-        response_text = chain.invoke({"input": text})
+        
+        # 关键修改：使用 await 和 ainvoke
+        response_text = await chain.ainvoke({"input": text})
 
         return response_text, target_model
 

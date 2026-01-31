@@ -70,6 +70,8 @@ const initCharts = () => {
   if (postureChartRef.value) {
     postureChart = echarts.init(postureChartRef.value);
     postureChart.setOption({
+      animation: false,
+      animationEasing: 'linear',
       title: {text: 'Joint Angles (Deg)', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {trigger: 'axis', axisPointer: {type: 'shadow'}},
       legend: {bottom: 0, data: ['Left Hand', 'Right Hand']},
@@ -90,6 +92,7 @@ const initCharts = () => {
   if (radarChartRef.value) {
     radarChart = echarts.init(radarChartRef.value);
     radarChart.setOption({
+      animation: false,
       title: {text: 'Fingertip Forces (N)', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {},
       radar: {
@@ -108,6 +111,7 @@ const initCharts = () => {
   if (trendChartRef.value) {
     trendChart = echarts.init(trendChartRef.value);
     trendChart.setOption({
+      animation: false,
       title: {text: 'Total Force Trend', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {trigger: 'axis'},
       legend: {bottom: 0, data: ['Left Total', 'Right Total']},
@@ -124,11 +128,12 @@ const initCharts = () => {
   if (healthChartRef.value) {
     healthChart = echarts.init(healthChartRef.value);
     healthChart.setOption({
+      animation: false,
       title: {text: 'Motor Load (mA)', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {trigger: 'axis'},
       legend: {bottom: 0, data: ['Left Hand', 'Right Hand']},
       grid: {left: '3%', right: '4%', bottom: '10%', containLabel: true},
-      xAxis: {type: 'value'},
+      xAxis: {type: 'value', max: 200},
       yAxis: {type: 'category', data: MOTOR_NAMES, inverse: true},
       series: [
         {name: 'Left Hand', type: 'bar', stack: null, itemStyle: {color: '#60a5fa'}, data: []},

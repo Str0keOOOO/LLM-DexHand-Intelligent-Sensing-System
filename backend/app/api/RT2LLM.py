@@ -42,7 +42,7 @@ async def chat(req: ChatRequest, request: Request):
     print(f"Chat Request: {req.message}")
 
     try:
-        raw_response, used_model = ask_ai(text=req.message + context_str, system_prompt=system_prompt, model_name=req.model)
+        raw_response, used_model = await ask_ai(text=req.message + context_str, system_prompt=system_prompt, model_name=req.model)
 
         json_data = extract_json(raw_response)
 

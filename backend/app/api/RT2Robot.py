@@ -78,7 +78,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             await websocket.send_text(json.dumps(data))
 
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.016)
 
     except WebSocketDisconnect:
         print("WS Client disconnected")
