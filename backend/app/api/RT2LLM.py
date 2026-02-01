@@ -22,11 +22,7 @@ def extract_json(text: str):
 
 
 @router.post("/send", response_model=ChatResponse)
-async def chat(
-    req: ChatRequest, 
-    request: Request, 
-    db: Session = Depends(get_db)
-):
+async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)):
     bridge: ROSBridgeManager | None = getattr(request.app.state, "ros_bridge", None)
     context_str = ""
     if bridge:
@@ -48,7 +44,6 @@ async def chat(
     print(f"Chat Request: {req.message}")
 
     try:
-        # 调用 AI
         raw_response, used_model = await ask_ai(text=req.message + context_str, system_prompt=system_prompt, model_name=req.model)
 
         json_data = extract_json(raw_response)
@@ -65,39 +60,24 @@ async def chat(
                     control_cmd = ControlCommand(**cmd_data)
                 except Exception as e:
                     reply_text += f"\n(Internal Error: Invalid command format generated): {str(e)}"
-        
-        # --- 新增逻辑：保存聊天记录到 MySQL ---
+
         try:
-            # 1. 保存用户的提问
-            user_log = ChatLog(
-                role="user",
-                content=req.message,
-                model=used_model
-            )
+            user_log = ChatLog(role="user", content=req.message, model=used_model)
             db.add(user_log)
 
-            # 2. 保存 AI 的回复
-            # 修改点：如果有控制指令，将其转换为字符串并追加到 content 中
             full_content = reply_text
             if control_cmd:
-                # 将指令对象转为字典 (使用 .dict() 兼容 Pydantic v1, 如果是 v2 可用 .model_dump())
-                cmd_dict = control_cmd.dict()
-                # 格式化 JSON 以便阅读
+                cmd_dict = control_cmd.model_dump()
                 cmd_str = json.dumps(cmd_dict, ensure_ascii=False, indent=2)
                 full_content += f"\n\n[Generated Command]:\n{cmd_str}"
 
-            assistant_log = ChatLog(
-                role="assistant",
-                content=full_content,  
-                model=used_model
-            )
+            assistant_log = ChatLog(role="assistant", content=full_content, model=used_model)
             db.add(assistant_log)
 
-            db.commit() # 提交事务
+            db.commit()
         except Exception as db_e:
             print(f"Database Error: {db_e}")
             db.rollback()
-        # ------------------------------------
 
     except Exception as e:
         reply_text = f"Error calling AI: {str(e)}"
@@ -109,6 +89,7 @@ async def chat(
         model_name=used_model,
         control_command=control_cmd,
     )
+
 
 @router.post("/check", response_model=CheckModelResponse)
 async def check_model_connection(req: CheckModelRequest):

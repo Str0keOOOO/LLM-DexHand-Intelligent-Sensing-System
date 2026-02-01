@@ -11,16 +11,13 @@ from app.schemas import ControlCommand
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动时：初始化 ROS Bridge
     mgr = ROSBridgeManager()
     mgr.start()
-    # 挂载到 app.state 供全局访问
     app.state.ros_bridge = mgr
     print("✅ ROS Bridge Manager started and attached to app.state")
-    
+
     yield
-    
-    # 关闭时：可以在这里添加清理逻辑
+
     print("🛑 Shutting down...")
 
 
