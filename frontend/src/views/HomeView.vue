@@ -3,7 +3,8 @@ import {ref} from 'vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import RobotChart from '@/components/RobotChart.vue'
 import RobotManualControl from '@/components/RobotManualControl.vue'
-import {TrendCharts, Timer, Odometer, Connection} from "@element-plus/icons-vue"
+
+import {TrendCharts, Timer, Odometer, Connection, DataLine} from "@element-plus/icons-vue"
 
 import {useChat} from '@/composable/hooks/useChat.ts'
 import {useRobot} from '@/composable/hooks/useRobot.ts'
@@ -25,8 +26,6 @@ const {isConnected, connStatusText, connStatusColor, formattedTime,} = useRobot(
 
 
 const controlDialogVisible = ref(false)
-
-
 </script>
 
 <template>
@@ -121,77 +120,39 @@ const controlDialogVisible = ref(false)
 </template>
 
 <style scoped lang="scss">
-/* 保持原有样式，新增以下控制面板样式 */
-.control-panel {
-  padding: 0 10px;
-}
+/* --- 样式部分 --- */
 
-.panel-section {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .label {
-    font-weight: bold;
-    color: #333;
-  }
-}
-
-.sliders-container {
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 10px;
-}
-
-.finger-group {
-  margin-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-
-  .group-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #409eff;
-    margin-bottom: 8px;
-  }
-}
-
-.slider-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 5px;
-
-  .joint-name {
-    width: 60px;
-    font-size: 12px;
-    color: #666;
-    font-family: monospace;
-  }
-
-  .flex-slider {
-    flex: 1;
-  }
-}
-
-/* 滚动条样式优化 */
-.sliders-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sliders-container::-webkit-scrollbar-thumb {
-  background: #dcdfe6;
-  border-radius: 3px;
-}
-
-/* 之前的 Dashboard 样式 (复用) */
+/* 之前的所有样式保持不变... */
 .dashboard-container {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: calc(100vh - 84px);
 }
 
+.main-row {
+  margin-bottom: 20px; /* 给第一行加个底部间距 */
+}
+
+/* 新增：分割线样式 */
+.section-divider {
+  margin: 30px 0 20px 0;
+
+  .divider-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #4b5563;
+  }
+}
+
+/* 确保历史表格高度适中，不会撑破页面 */
+.history-row {
+  margin-bottom: 40px;
+}
+
+/* 复用之前的卡片和布局样式 (为了代码简洁，以下样式与你原有的保持一致) */
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -225,193 +186,6 @@ const controlDialogVisible = ref(false)
       color: #1f2937;
     }
   }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-}
-
-.chat-card {
-  height: calc(100vh - 120px);
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border-radius: 16px;
-
-  :deep(.el-card__header) {
-    padding: 0 20px;
-    border-bottom: 1px solid #f0f2f5;
-  }
-}
-
-.model-select {
-  width: 130px;
-}
-
-.conn-badge {
-  display: flex;
-  align-items: center;
-  font-size: 20px;
-  cursor: help;
-  transition: transform 0.2s;
-
-  &.checking {
-    color: #E6A23C;
-  }
-
-  &.success {
-    color: #67C23A;
-  }
-
-  &.fail {
-    color: #F56C6C;
-  }
-
-  &:hover {
-    transform: scale(1.1);
-  }
-}
-
-.chat-window {
-  flex: 1;
-  background-color: #f8fafc;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: #909399;
-  gap: 10px;
-  font-size: 14px;
-}
-
-.message-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  max-width: 90%;
-
-  &.user {
-    flex-direction: row-reverse;
-    align-self: flex-end;
-  }
-
-  &.system {
-    align-self: flex-start;
-  }
-}
-
-.avatar {
-  background-color: #fff;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
-  flex-shrink: 0;
-
-  &.user-avatar {
-    background-color: #eff6ff;
-    color: #3b82f6;
-    border-color: #dbeafe;
-  }
-}
-
-.bubble-container {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ✨ 修改: 消息气泡样式，支持代码块 */
-.message-bubble {
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-  position: relative;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  word-break: break-word;
-  white-space: pre-wrap; /* 确保普通文本也能正确换行 */
-
-  .code-block {
-    background-color: #1e293b; /* 深色背景 */
-    color: #a5b4fc; /* 浅紫色/蓝色字体 */
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    font-size: 12px;
-    padding: 10px;
-    border-radius: 8px;
-    margin: 8px 0;
-    overflow-x: auto; /* 超长自动滚动 */
-    border: 1px solid #334155;
-  }
-
-  .text-block {
-    display: inline;
-  }
-}
-
-.system .message-bubble {
-  background-color: #ffffff;
-  color: #334155;
-  border-top-left-radius: 2px;
-  border: 1px solid #f1f5f9;
-}
-
-.user .message-bubble {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border-top-right-radius: 2px;
-}
-
-/* 针对用户气泡的微调 */
-.user .message-bubble .code-block {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.model-tag {
-  font-size: 10px;
-  color: #94a3b8;
-  margin-top: 4px;
-  margin-left: 4px;
-}
-
-.input-area {
-  padding: 15px 20px;
-  background-color: #fff;
-  border-top: 1px solid #f0f2f5;
-
-  :deep(.el-input__wrapper) {
-    box-shadow: none;
-    background-color: #f1f5f9;
-    border-radius: 20px;
-    padding-left: 15px;
-
-    &.is-focus {
-      box-shadow: 0 0 0 1px #409eff inset;
-      background-color: #fff;
-    }
-  }
 }
 
 .stat-card {
@@ -440,41 +214,16 @@ const controlDialogVisible = ref(false)
     align-items: center;
     font-size: 24px;
 
-    &.blue-bg {
-      background-color: #eff6ff;
-      color: #3b82f6;
-    }
-
-    &.purple-bg {
-      background-color: #f3e8ff;
-      color: #a855f7;
-    }
-
-    &.green-bg {
-      background-color: #f0fdf4;
-      color: #22c55e;
-    }
+    &.blue-bg { background-color: #eff6ff; color: #3b82f6; }
+    &.purple-bg { background-color: #f3e8ff; color: #a855f7; }
+    &.green-bg { background-color: #f0fdf4; color: #22c55e; }
   }
 
   .stat-info {
     display: flex;
     flex-direction: column;
-
-    .label {
-      font-size: 13px;
-      color: #64748b;
-      margin-bottom: 4px;
-    }
-
-    .value {
-      font-size: 18px;
-      font-weight: 700;
-      color: #0f172a;
-
-      &.font-mono {
-        font-family: 'Monaco', 'Menlo', monospace;
-      }
-    }
+    .label { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+    .value { font-size: 18px; font-weight: 700; color: #0f172a; }
   }
 }
 
@@ -482,7 +231,6 @@ const controlDialogVisible = ref(false)
   border: none;
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-
   :deep(.el-card__header) {
     padding: 15px 20px;
     border-bottom: 1px solid #f0f2f5;
@@ -492,5 +240,10 @@ const controlDialogVisible = ref(false)
 .chart-container {
   min-height: 350px;
   padding: 10px 0;
+}
+
+/* 适配 ChatPanel 的样式 */
+.left-col {
+  /* 可以在这里给 ChatPanel 加上高度限制或者其他布局调整 */
 }
 </style>

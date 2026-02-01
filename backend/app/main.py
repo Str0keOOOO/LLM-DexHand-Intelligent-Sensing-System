@@ -8,9 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.ros.bridge import ROSBridgeManager
-
+from app.database.mysql import engine, Base, ChatLog
 
 app = FastAPI(title="LLM DexHand System")
+
+Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,

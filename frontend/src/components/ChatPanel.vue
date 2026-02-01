@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type {ConnStatus1, ModelOption, ChatMsg} from "@/composable/types/Type2LLM.ts";
 import {ChatLineRound, Cpu, CircleCheck, CircleClose, Loading, Delete, UserFilled, Service, Operation} from '@element-plus/icons-vue'
-
+// TODO 要让他看情况自动滚动到底部
 const props = defineProps<{
   modelOptions: ModelOption[]
   selectedModel: string
