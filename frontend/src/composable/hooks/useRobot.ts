@@ -1,5 +1,5 @@
 import {ref, computed, onMounted, onUnmounted} from 'vue';
-import type {RobotState} from '@/composable/interfaces/Inter2Robot';
+import type {RobotState} from '@/composable/types/robot';
 
 const robotState = ref<RobotState>({
     left: {joints: {}, touch: [], motor: []},

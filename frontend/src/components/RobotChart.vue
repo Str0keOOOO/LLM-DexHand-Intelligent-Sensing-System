@@ -2,7 +2,7 @@
 import {ref, onMounted, onUnmounted, watch} from 'vue';
 import * as echarts from 'echarts';
 import {useRobot} from '@/composable/hooks/useRobot';
-import type {HistoryData} from "@/composable/interfaces/Inter2Robot.ts";
+import type {HistoryData} from "@/composable/types/robot";
 
 const {robotState} = useRobot();
 
@@ -33,7 +33,7 @@ const MOTOR_NAMES = [
   'LF_DIP', 'LF_MCP'
 ];
 
-const extractMotorAngles = (motorArray: number[]) => {
+function extractMotorAngles(motorArray: number[]) {
   if (!motorArray || motorArray.length < 84) return new Array(12).fill(0);
 
   const angles: number[] = [];
@@ -44,7 +44,7 @@ const extractMotorAngles = (motorArray: number[]) => {
   return angles;
 };
 
-const extractMotorCurrents = (motorArray: number[]) => {
+function extractMotorCurrents(motorArray: number[]) {
   if (!motorArray || motorArray.length < 84) return new Array(12).fill(0);
 
   const currents: number[] = [];
@@ -55,7 +55,7 @@ const extractMotorCurrents = (motorArray: number[]) => {
   return currents;
 };
 
-const extractFingerForces = (touchArray: number[]) => {
+function extractFingerForces(touchArray: number[]) {
   if (!touchArray || touchArray.length < 40) return [0, 0, 0, 0, 0];
 
   const forces: number[] = [];
@@ -66,7 +66,7 @@ const extractFingerForces = (touchArray: number[]) => {
   return forces;
 };
 
-const initCharts = () => {
+function initCharts() {
   if (postureChartRef.value) {
     postureChart = echarts.init(postureChartRef.value);
     postureChart.setOption({
@@ -141,7 +141,7 @@ const initCharts = () => {
       ]
     });
   }
-};
+}
 
 watch(() => robotState.value, (newVal) => {
   if (!newVal || !postureChart) return;
@@ -187,12 +187,13 @@ watch(() => robotState.value, (newVal) => {
 
 }, {deep: true});
 
-const resizeHandler = () => {
+function resizeHandler() {
   postureChart?.resize();
   radarChart?.resize();
   trendChart?.resize();
   healthChart?.resize();
-};
+}
+
 onMounted(() => {
   initCharts();
   window.addEventListener('resize', resizeHandler);

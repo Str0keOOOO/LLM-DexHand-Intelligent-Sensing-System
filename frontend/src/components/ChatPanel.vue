@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type {ConnStatus1, ModelOption, ChatMsg} from "@/composable/types/Type2LLM.ts";
-import {ChatLineRound, Cpu, CircleCheck, CircleClose, Loading, Delete, UserFilled, Service, Operation} from '@element-plus/icons-vue'
-// TODO 要让他看情况自动滚动到底部
+import {computed, ref, nextTick, watch, onMounted} from 'vue'
+import type {ConnStatus, ModelOption, ChatMsg} from '@/composable/types/llm'
+import {
+  ChatLineRound,
+  Cpu,
+  CircleCheck,
+  CircleClose,
+  Loading,
+  Delete,
+  UserFilled,
+  Service,
+  Operation
+} from '@element-plus/icons-vue'
+
 const props = defineProps<{
   modelOptions: ModelOption[]
   selectedModel: string
   isLoadingModels: boolean
 
-  connStatus: ConnStatus1
+  connStatus: ConnStatus
   connMessage: string
 
   chatHistory: ChatMsg[]
@@ -35,14 +45,54 @@ const inputCommandModel = computed({
   set: (v: string) => emit('update:inputCommand', v)
 })
 
-const parseContent = (content: string) => {
+const chatWindowRef = ref<HTMLElement | null>(null)
+
+const AUTO_SCROLL_THRESHOLD_PX = 80
+const isNearBottom = ref(true)
+
+function computeIsNearBottom() {
+  const el = chatWindowRef.value
+  if (!el) return
+  const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+  isNearBottom.value = distanceToBottom <= AUTO_SCROLL_THRESHOLD_PX
+}
+
+function scrollToBottom(behavior: ScrollBehavior = 'auto') {
+  const el = chatWindowRef.value
+  if (!el) return
+  el.scrollTo({top: el.scrollHeight, behavior})
+}
+
+onMounted(() => {
+  computeIsNearBottom()
+  nextTick(() => scrollToBottom('auto'))
+})
+
+watch(
+    () => props.chatHistory.length,
+    async (n, o) => {
+      if (n === o) return
+      await nextTick()
+      if (isNearBottom.value) scrollToBottom('smooth')
+    }
+)
+
+watch(
+    () => props.chatHistory[props.chatHistory.length - 1]?.content,
+    async () => {
+      await nextTick()
+      if (isNearBottom.value) scrollToBottom('auto')
+    }
+)
+
+function parseContent(content: string) {
   const parts = content.split(/```/)
   return parts.map((part, index) => {
     if (index % 2 === 1) {
       const code = part.replace(/^[a-z]+\n/, '')
-      return { type: 'code' as const, text: code.trim() }
+      return {type: 'code' as const, text: code.trim()}
     }
-    return { type: 'text' as const, text: part }
+    return {type: 'text' as const, text: part}
   })
 }
 </script>
@@ -53,7 +103,9 @@ const parseContent = (content: string) => {
       <div class="card-header">
         <div class="header-left">
           <div class="icon-box">
-            <el-icon :size="18"><ChatLineRound /></el-icon>
+            <el-icon :size="18">
+              <ChatLineRound/>
+            </el-icon>
           </div>
           <span class="title">智能指令交互</span>
         </div>
@@ -67,8 +119,12 @@ const parseContent = (content: string) => {
               :loading="isLoadingModels"
               :disabled="isSending || isLoadingModels"
           >
-            <template #prefix><el-icon><Cpu /></el-icon></template>
-            <el-option v-for="item in modelOptions" :key="item.value" :label="item.label" :value="item.value" />
+            <template #prefix>
+              <el-icon>
+                <Cpu/>
+              </el-icon>
+            </template>
+            <el-option v-for="item in modelOptions" :key="item.value" :label="item.label" :value="item.value"/>
           </el-select>
 
           <el-tooltip content="打开手动控制面板" placement="top">
@@ -80,35 +136,47 @@ const parseContent = (content: string) => {
                 plain
                 @click="emit('open-manual')"
             >
-              <el-icon><Operation /></el-icon>
+              <el-icon>
+                <Operation/>
+              </el-icon>
             </el-button>
           </el-tooltip>
 
           <el-tooltip content="清空对话历史" placement="top">
             <el-button class="action-btn" size="small" circle :disabled="isSending" @click="emit('clear', true)">
-              <el-icon><Delete /></el-icon>
+              <el-icon>
+                <Delete/>
+              </el-icon>
             </el-button>
           </el-tooltip>
 
           <el-tooltip :content="connMessage" placement="top">
             <div class="conn-badge" :class="connStatus">
-              <el-icon v-if="connStatus === 'checking'" class="is-loading"><Loading /></el-icon>
-              <el-icon v-else-if="connStatus === 'success'"><CircleCheck /></el-icon>
-              <el-icon v-else-if="connStatus === 'fail'"><CircleClose /></el-icon>
+              <el-icon v-if="connStatus === 'checking'" class="is-loading">
+                <Loading/>
+              </el-icon>
+              <el-icon v-else-if="connStatus === 'success'">
+                <CircleCheck/>
+              </el-icon>
+              <el-icon v-else-if="connStatus === 'fail'">
+                <CircleClose/>
+              </el-icon>
             </div>
           </el-tooltip>
         </div>
       </div>
     </template>
 
-    <div class="chat-window" id="chat-window">
+    <div class="chat-window" id="chat-window" ref="chatWindowRef" @scroll="computeIsNearBottom">
       <div v-if="chatHistory.length === 0" class="empty-state">
-        <el-icon :size="40" color="#E4E7ED"><Service /></el-icon>
+        <el-icon :size="40" color="#E4E7ED">
+          <Service/>
+        </el-icon>
         <p>暂无对话，请输入指令开始控制</p>
       </div>
 
       <div v-for="(msg, index) in chatHistory" :key="index" :class="['message-row', msg.role]">
-        <el-avatar v-if="msg.role === 'system'" :size="36" class="avatar system-avatar" :icon="Service" />
+        <el-avatar v-if="msg.role === 'system'" :size="36" class="avatar system-avatar" :icon="Service"/>
 
         <div class="bubble-container">
           <div class="message-bubble">
@@ -120,7 +188,7 @@ const parseContent = (content: string) => {
           <div v-if="msg.role === 'system' && msg.model" class="model-tag">Powered by {{ msg.model }}</div>
         </div>
 
-        <el-avatar v-if="msg.role === 'user'" :size="36" class="avatar user-avatar" :icon="UserFilled" />
+        <el-avatar v-if="msg.role === 'user'" :size="36" class="avatar user-avatar" :icon="UserFilled"/>
       </div>
     </div>
 
@@ -212,9 +280,11 @@ const parseContent = (content: string) => {
   &.checking {
     color: #e6a23c;
   }
+
   &.success {
     color: #67c23a;
   }
+
   &.fail {
     color: #f56c6c;
   }
@@ -236,10 +306,12 @@ const parseContent = (content: string) => {
   &::-webkit-scrollbar {
     width: 6px;
   }
+
   &::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 3px;
   }
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
@@ -266,6 +338,7 @@ const parseContent = (content: string) => {
     flex-direction: row-reverse;
     align-self: flex-end;
   }
+
   &.system {
     align-self: flex-start;
   }

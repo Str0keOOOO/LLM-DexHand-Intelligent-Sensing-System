@@ -1,7 +1,6 @@
 import {defineStore} from 'pinia'
 import {ref, watch} from 'vue'
-import type {ChatMsg, ModelOption} from '@/composable/interfaces/Inter2LLM.ts'
-import type {ModelVal} from '@/composable/types/Type2LLM.ts'
+import type {ChatMsg, ModelOption} from '@/composable/types/llm'
 
 export const useChatStore = defineStore('chat', () => {
     // 1. 聊天记录
@@ -10,7 +9,7 @@ export const useChatStore = defineStore('chat', () => {
 
     // 2. 选中的模型
     const savedModel = localStorage.getItem('selected_model')
-    const selectedModel = ref<ModelVal>(savedModel ? JSON.parse(savedModel) : '')
+    const selectedModel = ref<string>(savedModel ? JSON.parse(savedModel) : '')
 
     const modelOptions = ref<ModelOption[]>([])
     const isLoadingModels = ref(false)

@@ -1,25 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { getSensorHistory, type SensorItem } from '@/composable/api/DBApi'
-import { ElMessage } from 'element-plus'
+import {ref, onMounted} from 'vue'
+import {getSensorHistory} from '@/composable/api/Chat2DB'
+import type {SensorItem} from "@/composable/types/robot";
+import {ElMessage} from 'element-plus'
 
-// 响应式状态
 const tableData = ref<SensorItem[]>([])
 const loading = ref(false)
 const selectedHand = ref('right')
 const queryMinutes = ref(1)
 
-/**
- * 获取后端数据
- */
-const fetchData = async () => {
+async function fetchData() {
   loading.value = true
   try {
-    // 调用 DBApi.ts 中的接口
     const res = await getSensorHistory(queryMinutes.value, selectedHand.value)
 
     if (res && res.data) {
-      // 核心：按时间倒序排列（最新数据在最上面）
       tableData.value = res.data.sort((a, b) =>
           new Date(b.time).getTime() - new Date(a.time).getTime()
       )
@@ -36,10 +31,7 @@ const fetchData = async () => {
   }
 }
 
-/**
- * 导出 CSV 功能
- */
-const downloadCSV = () => {
+function downloadCSV() {
   if (tableData.value.length === 0) return
 
   const headers = ['Time', 'Hand', 'Field', 'Value']
@@ -55,7 +47,7 @@ const downloadCSV = () => {
     ...rows.map(r => r.join(','))
   ].join('\n')
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -171,8 +163,16 @@ onMounted(() => {
   border-radius: 4px;
   background: #333;
 }
-.status-tag.left { color: #63b3ed; border: 1px solid #2c5282; }
-.status-tag.right { color: #f6ad55; border: 1px solid #9c4221; }
+
+.status-tag.left {
+  color: #63b3ed;
+  border: 1px solid #2c5282;
+}
+
+.status-tag.right {
+  color: #f6ad55;
+  border: 1px solid #9c4221;
+}
 
 .controls {
   display: flex;
@@ -252,8 +252,13 @@ td {
   font-family: 'Courier New', Courier, monospace;
 }
 
-.side-cell span.left { color: #63b3ed; }
-.side-cell span.right { color: #f6ad55; }
+.side-cell span.left {
+  color: #63b3ed;
+}
+
+.side-cell span.right {
+  color: #f6ad55;
+}
 
 .no-data {
   text-align: center;
@@ -265,6 +270,7 @@ td {
 .table-container::-webkit-scrollbar {
   width: 6px;
 }
+
 .table-container::-webkit-scrollbar-thumb {
   background: #444;
   border-radius: 3px;

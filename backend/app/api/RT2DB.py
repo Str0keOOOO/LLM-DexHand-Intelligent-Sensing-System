@@ -21,7 +21,7 @@ def get_chat_history(limit: int = 20, skip: int = 0, db: Session = Depends(get_d
 
 
 @router.get("/sensor_history")
-async def get_sensor_history(minutes: int = Query(1, description="Time range in minutes"), hand: str = Query("right", regex="^(left|right)$")):
+async def get_sensor_history(minutes: int = Query(1, description="Time range in minutes"), hand: str = Query("right", pattern="^(left|right)$")):
     """
     获取指定手部的触觉传感器历史数据
     """

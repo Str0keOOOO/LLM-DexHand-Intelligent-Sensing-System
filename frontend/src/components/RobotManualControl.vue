@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {sendControlCommand} from "@/composable/api/Chat2Robot.ts";
+import {sendControlCommand} from "@/composable/api/Chat2Robot";
 import {ElMessage} from "element-plus";
 import {reactive, ref} from "vue";
-import type {Joints, ControlForm} from "@/composable/types/Type2Robot";
+import type {JointsState, ControlForm} from "@/composable/types/robot";
 
 const controlLoading = ref(false)
 
@@ -19,7 +19,7 @@ const controlForm = reactive<ControlForm>({
 
 const visible = defineModel<boolean>({default: false})
 
-const fingerGroups: { name: string; joints: (keyof Joints)[] }[] = [
+const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
   {name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip']},
   {name: 'Index (食指)', joints: ['ff_spr', 'ff_mcp', 'ff_dip']},
   {name: 'Middle (中指)', joints: ['mf_mcp', 'mf_dip']},
@@ -28,7 +28,7 @@ const fingerGroups: { name: string; joints: (keyof Joints)[] }[] = [
 ]
 
 
-const handleSendControl = async () => {
+async function handleSendControl() {
   controlLoading.value = true
   try {
     const prefix = controlForm.hand === 'left' ? 'l_' : 'r_'
@@ -52,7 +52,7 @@ const handleSendControl = async () => {
   }
 }
 
-const resetSliders = () => {
+function resetSliders() {
   for (const key in controlForm.joints) {
     (controlForm.joints as any)[key] = 0
   }

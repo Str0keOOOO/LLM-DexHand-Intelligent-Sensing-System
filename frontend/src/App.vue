@@ -8,7 +8,9 @@ import {Cpu, Document, Monitor, Folder} from "@element-plus/icons-vue";
     <el-aside width="240px" class="aside-menu">
       <div class="logo-area">
         <div class="logo-icon-bg">
-          <el-icon :size="20"><Cpu/></el-icon>
+          <el-icon :size="20">
+            <Cpu/>
+          </el-icon>
         </div>
         <span class="logo-text">LDISS 系统</span>
       </div>
@@ -22,15 +24,21 @@ import {Cpu, Document, Monitor, Folder} from "@element-plus/icons-vue";
           router
       >
         <el-menu-item index="/">
-          <el-icon><Monitor/></el-icon>
+          <el-icon>
+            <Monitor/>
+          </el-icon>
           <span>智能采集控制台</span>
         </el-menu-item>
         <el-menu-item index="/about">
-          <el-icon><Document/></el-icon>
+          <el-icon>
+            <Document/>
+          </el-icon>
           <span>系统说明</span>
         </el-menu-item>
         <el-menu-item index="/history">
-          <el-icon><Folder/></el-icon>
+          <el-icon>
+            <Folder/>
+          </el-icon>
           <span>历史记录下载</span>
         </el-menu-item>
       </el-menu>
@@ -62,7 +70,7 @@ import {Cpu, Document, Monitor, Folder} from "@element-plus/icons-vue";
   display: flex;
   flex-direction: column;
   transition: width 0.3s;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   z-index: 10;
 }
 

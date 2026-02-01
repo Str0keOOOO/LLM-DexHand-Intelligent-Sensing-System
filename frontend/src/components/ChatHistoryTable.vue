@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import {ref, onMounted} from 'vue'
-import {getChatHistory, type ChatLogItem} from '@/composable/api/DBApi'
+import {getChatHistory} from '@/composable/api/Chat2DB'
+import type {ChatLogItem} from "@/composable/types/llm";
 
 const tableData = ref<ChatLogItem[]>([])
 const loading = ref(false)
 
-const fetchData = async () => {
+async function fetchData() {
   loading.value = true
   try {
-    const res = await getChatHistory(100) // 获取最近100条
+    const res = await getChatHistory(100)
     tableData.value = res.data
   } catch (error) {
     console.error('Failed to fetch chat history', error)
@@ -17,13 +18,10 @@ const fetchData = async () => {
   }
 }
 
-// 简单的 CSV 导出功能
-const downloadCSV = () => {
+function downloadCSV() {
   if (tableData.value.length === 0) return
 
-  // 定义表头
   const headers = ['ID', 'Time', 'Role', 'Model', 'Content']
-  // 转换数据行
   const rows = tableData.value.map(row => [
     row.id,
     row.created_at,
@@ -32,13 +30,11 @@ const downloadCSV = () => {
     `"${row.content.replace(/"/g, '""')}"` // 处理内容中的引号
   ])
 
-  // 拼接 CSV 内容
   const csvContent = [
     headers.join(','),
     ...rows.map(r => r.join(','))
   ].join('\n')
 
-  // 创建下载链接
   const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

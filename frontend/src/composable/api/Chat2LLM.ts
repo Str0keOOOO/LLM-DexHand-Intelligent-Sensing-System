@@ -5,9 +5,8 @@ import type {
     CheckModelRequest,
     CheckModelResponse,
     ModelListResponse
-} from '@/composable/interfaces/Inter2LLM.ts'
+} from '@/composable/types/llm'
 
-// TODO 这里可能会有阻塞问题到时候一起解决
 export function getModels() {
     return request.get<ModelListResponse>('/chat/models')
 }

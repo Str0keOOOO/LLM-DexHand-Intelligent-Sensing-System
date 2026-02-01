@@ -45,7 +45,7 @@ async def ask_ai(text: str, system_prompt: str, model_name: str = None) -> tuple
         llm = get_llm_model(target_model)
         prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("user", "{input}")])
         chain = prompt | llm | StrOutputParser()
-        
+
         # 关键修改：使用 await 和 ainvoke
         response_text = await chain.ainvoke({"input": text})
 

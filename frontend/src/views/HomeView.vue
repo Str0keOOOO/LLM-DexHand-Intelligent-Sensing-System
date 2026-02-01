@@ -4,10 +4,10 @@ import ChatPanel from '@/components/ChatPanel.vue'
 import RobotChart from '@/components/RobotChart.vue'
 import RobotManualControl from '@/components/RobotManualControl.vue'
 
-import {TrendCharts, Timer, Odometer, Connection, DataLine} from "@element-plus/icons-vue"
+import {TrendCharts, Timer, Odometer, Connection} from "@element-plus/icons-vue"
 
-import {useChat} from '@/composable/hooks/useChat.ts'
-import {useRobot} from '@/composable/hooks/useRobot.ts'
+import {useChat} from '@/composable/hooks/useChat'
+import {useRobot} from '@/composable/hooks/useRobot'
 
 
 const {
@@ -214,16 +214,37 @@ const controlDialogVisible = ref(false)
     align-items: center;
     font-size: 24px;
 
-    &.blue-bg { background-color: #eff6ff; color: #3b82f6; }
-    &.purple-bg { background-color: #f3e8ff; color: #a855f7; }
-    &.green-bg { background-color: #f0fdf4; color: #22c55e; }
+    &.blue-bg {
+      background-color: #eff6ff;
+      color: #3b82f6;
+    }
+
+    &.purple-bg {
+      background-color: #f3e8ff;
+      color: #a855f7;
+    }
+
+    &.green-bg {
+      background-color: #f0fdf4;
+      color: #22c55e;
+    }
   }
 
   .stat-info {
     display: flex;
     flex-direction: column;
-    .label { font-size: 13px; color: #64748b; margin-bottom: 4px; }
-    .value { font-size: 18px; font-weight: 700; color: #0f172a; }
+
+    .label {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
   }
 }
 
@@ -231,6 +252,7 @@ const controlDialogVisible = ref(false)
   border: none;
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
   :deep(.el-card__header) {
     padding: 15px 20px;
     border-bottom: 1px solid #f0f2f5;
