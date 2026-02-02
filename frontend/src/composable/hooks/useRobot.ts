@@ -26,7 +26,7 @@ export function useRobot() {
         if (ws) return;
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//localhost:8000/api/ros_ws/robot-data`;
+        const wsUrl = `${protocol}//${window.location.host}/api/ros_ws/robot-data`;
 
         ws = new WebSocket(wsUrl);
 

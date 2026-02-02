@@ -3,7 +3,7 @@ import {storeToRefs} from 'pinia'
 import {useChatStore} from '@/composable/stores/Store2Chat'
 import {getModels, sendChatMsg, checkModelConnect} from '@/composable/api/Chat2LLM'
 import {sendControlCommand as apiSendControl} from '@/composable/api/Chat2Robot'
-import type {ModelOption, ChatMsg, ConnStatus, ControlRespPayload} from '@composable/types/llm'
+import type {ModelOption, ChatMsg, ConnStatus, ControlRespPayload} from '@/composable/types/llm'
 
 const chatWelcomeMessage: ChatMsg = {
     role: 'system',
