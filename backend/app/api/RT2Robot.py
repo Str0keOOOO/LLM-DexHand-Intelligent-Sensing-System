@@ -1,6 +1,5 @@
 import json
 import asyncio
-from contextlib import asynccontextmanager
 
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, FastAPI, Request, HTTPException
@@ -9,19 +8,7 @@ from app.ros.bridge import ROSBridgeManager
 from app.schemas import ControlCommand
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    mgr = ROSBridgeManager()
-    mgr.start()
-    app.state.ros_bridge = mgr
-    print("✅ ROS Bridge Manager started and attached to app.state")
-
-    yield
-
-    print("🛑 Shutting down...")
-
-
-router = APIRouter(lifespan=lifespan)
+router = APIRouter()
 
 
 @router.get("/health")

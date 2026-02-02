@@ -1,0 +1,21 @@
+FROM ros:humble-ros-base
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git config --global http.version HTTP/1.1
+
+COPY . .
+
+RUN pip3 install --no-cache-dir .
+
+
+CMD ["python3", "examples/ros_node/virtual_dexhand_ros.py"]

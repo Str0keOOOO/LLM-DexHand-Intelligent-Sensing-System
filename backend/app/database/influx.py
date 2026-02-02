@@ -2,15 +2,18 @@ import os
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import WriteOptions
 
-# 读取 .env 配置
-url = os.getenv("INFLUXDB_URL")
-token = os.getenv("INFLUXDB_TOKEN")
-org = os.getenv("INFLUXDB_ORG")
-INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET")
+
+def _build_influx_url() -> str:
+    host = os.getenv("INFLUX_HOST", "localhost")
+    port = os.getenv("INFLUX_PORT", "8086")
+    return f"http://{host}:{port}"
+
+
+url = _build_influx_url()
+token = os.getenv("INFLUX_TOKEN", "my-super-secret-token")
+org = os.getenv("INFLUX_ORG", "dexhand_org")
+INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "dexhand_bucket")
 
 client = InfluxDBClient(url=url, token=token, org=org)
-
-_write_options = WriteOptions(batch_size=500, flush_interval=1000, jitter_interval=200, retry_interval=5000)
-
-write_api = client.write_api(write_options=_write_options)
+write_api = client.write_api(write_options=WriteOptions(batch_size=500))
 query_api = client.query_api()

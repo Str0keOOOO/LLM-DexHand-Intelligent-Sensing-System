@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
@@ -10,7 +11,21 @@ from app.api.router import api_router
 from app.ros.bridge import ROSBridgeManager
 from app.database.mysql import engine, Base, ChatLog
 
-app = FastAPI(title="LLM DexHand System")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    mgr = ROSBridgeManager()
+    mgr.start()
+
+    app.state.ros_bridge = mgr
+    print("✅ ROS Bridge Manager started and attached to app.state")
+
+    yield
+
+    print("🛑 Shutting down...")
+
+
+app = FastAPI(title="LLM DexHand System", lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
 

@@ -1,0 +1,83 @@
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: dexhand_mysql
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - dexhand_net
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  influxdb:
+    image: influxdb:2.0
+    container_name: dexhand_influxdb
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
+    networks:
+      - dexhand_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dexhand_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: mysql_db
+      DB_PORT: "3306"
+      INFLUX_HOST: influxdb
+      INFLUX_PORT: "8086"
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+    networks:
+      - dexhand_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dexhand_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - dexhand_net
+
+  virtual_hand:
+    build:
+      context: ./pyzlg_dexhand
+      dockerfile: Dockerfile.virtual
+    container_name: dexhand_virtual_node
+    restart: unless-stopped
+    environment:
+      - ROS_DOMAIN_ID=0
+    networks:
+      - dexhand_net
+
+volumes:
+  mysql_data:
+  influxdb_data:
+
+networks:
+  dexhand_net:
+    driver: bridge
