@@ -10,7 +10,8 @@ import {
   Delete,
   UserFilled,
   Service,
-  Operation
+  Operation,
+  Microphone
 } from '@element-plus/icons-vue'
 
 const props = defineProps<{
@@ -25,6 +26,7 @@ const props = defineProps<{
   inputCommand: string
 
   isSending: boolean
+  isRecording: boolean
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +35,7 @@ const emit = defineEmits<{
   (e: 'send'): void
   (e: 'clear', hard: boolean): void
   (e: 'open-manual'): void
+  (e: 'toggle-recording'): void // 3. 增加切换录音的事件
 }>()
 
 const selectedModelModel = computed({
@@ -202,12 +205,27 @@ function parseContent(content: string) {
       >
         <template #suffix>
           <el-button
+              :type="isRecording ? 'danger' : 'default'"
+              :class="{ 'is-pulsing': isRecording }"
+              circle
+              size="small"
+              style="margin-right: 8px"
+              @click="emit('toggle-recording')"
+              :disabled="isSending"
+          >
+            <el-icon>
+              <Loading v-if="isRecording"/>
+              <Microphone v-else/>
+            </el-icon>
+          </el-button>
+
+          <el-button
               type="primary"
               round
               size="small"
               @click="emit('send')"
               :loading="isSending"
-              :disabled="connStatus === 'fail'"
+              :disabled="connStatus === 'fail' || isRecording"
           >
             发送
           </el-button>
@@ -430,6 +448,22 @@ function parseContent(content: string) {
       box-shadow: 0 0 0 1px #409eff inset;
       background-color: #fff;
     }
+  }
+}
+
+.is-pulsing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 108, 108, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 108, 108, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 108, 108, 0);
   }
 }
 </style>

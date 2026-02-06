@@ -68,3 +68,12 @@ async def websocket_endpoint(websocket: WebSocket):
         print("WS Client disconnected")
     except Exception as e:
         print(f"WS Error: {e}")
+
+
+@router.post("/reset")
+async def reset_robot(request: Request):
+    bridge = request.app.state.ros_bridge
+    if bridge and bridge._node:
+        success = bridge._node.call_reset_service()
+        return {"status": "success" if success else "failed"}
+    raise HTTPException(status_code=503, detail="Bridge not ready")

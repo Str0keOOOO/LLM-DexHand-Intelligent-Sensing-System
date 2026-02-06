@@ -8,3 +8,9 @@ export function sendControlCommand(data: ControlCommand) {
     }>;
 }
 
+export function resetRobot() {
+    return request.post<{ status: string; message: string }>('/ros_ws/reset') as unknown as Promise<{
+        status: string;
+        message: string
+    }>;
+}

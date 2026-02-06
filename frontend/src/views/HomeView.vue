@@ -11,16 +11,10 @@ import {useRobot} from '@/composable/hooks/useRobot'
 
 
 const {
-  modelOptions,
-  selectedModel,
-  isLoadingModels,
-  connStatus,
-  connMessage,
-  chatHistory,
-  inputCommand,
-  isSending,
-  sendCommand,
-  clearChatHistory
+  modelOptions, selectedModel, isLoadingModels,
+  connStatus, connMessage, chatHistory,
+  inputCommand, isSending, isRecording,
+  sendCommand, clearChatHistory, toggleRecording
 } = useChat()
 const {isConnected, connStatusText, connStatusColor, formattedTime,} = useRobot()
 
@@ -41,9 +35,11 @@ const controlDialogVisible = ref(false)
             :conn-message="connMessage"
             :chat-history="chatHistory"
             :is-sending="isSending"
+            :is-recording="isRecording"
             @send="sendCommand"
             @clear="clearChatHistory"
             @open-manual="controlDialogVisible = true"
+            @toggle-recording="toggleRecording"
         />
       </el-col>
 

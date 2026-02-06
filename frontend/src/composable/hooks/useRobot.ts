@@ -1,5 +1,7 @@
 import {ref, computed, onMounted, onUnmounted} from 'vue';
 import type {RobotState} from '@/composable/types/robot';
+import {resetRobot} from "@/composable/api/Chat2Robot.ts";
+import {ElMessage} from 'element-plus'
 
 const robotState = ref<RobotState>({
     left: {joints: {}, touch: [], motor: []},
@@ -60,13 +62,26 @@ export function useRobot() {
         };
     };
 
-    const closeWebSocket = () => {
+    function closeWebSocket() {
         if (ws) {
             ws.close();
             ws = null;
         }
         clearTimeout(reconnectTimer);
     };
+
+    async function handleReset() {
+        try {
+            const res = await resetRobot()
+            if (res.status === 'success') {
+                ElMessage.success('手部重置序列已启动')
+            } else {
+                ElMessage.error('重置失败')
+            }
+        } catch (error) {
+            ElMessage.error('无法连接到后端服务器')
+        }
+    }
 
     onMounted(() => {
         connectWebSocket();
@@ -84,5 +99,6 @@ export function useRobot() {
         formattedTime,
         connectWebSocket,
         closeWebSocket,
+        handleReset
     };
 }

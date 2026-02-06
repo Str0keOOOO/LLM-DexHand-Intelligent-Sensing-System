@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float64MultiArray
 from sensor_msgs.msg import JointState
+from std_srvs.srv import Trigger
 from influxdb_client import Point
 from app.database.influx import write_api, INFLUXDB_BUCKET, org
 
@@ -70,6 +71,14 @@ class BackendBridgeNode(Node):
             write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=point)
         except Exception:
             pass
+
+    def call_reset_service(self):
+        client = self.create_client(Trigger, "/reset_hands")
+        if not client.wait_for_service(timeout_sec=1.0):
+            return False
+        req = Trigger.Request()
+        client.call_async(req)
+        return True
 
     def publish_command(self, hand: str, joint_map: dict):
         if hand not in self.publishers_dict:
