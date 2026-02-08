@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
 
@@ -50,3 +50,12 @@ class RobotStatus(BaseModel):
     fingers: List[float]
     status: Optional[str] = None
     error: Optional[str] = None
+
+
+# --- 5. 机械臂相关 (新增) ---
+class TrackScriptRequest(BaseModel):
+    n: int = Field(..., ge=0, description="第n段轨迹编号")
+
+
+class SysVarRequest(BaseModel):
+    idx: int = Field(..., ge=0, description="系统变量索引")

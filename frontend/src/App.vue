@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {RouterView} from 'vue-router'
-import {Cpu, Document, Monitor, Folder} from "@element-plus/icons-vue";
+import {Cpu, Document, Monitor, Folder, Setting} from "@element-plus/icons-vue";
 </script>
 
 <template>
@@ -40,6 +40,12 @@ import {Cpu, Document, Monitor, Folder} from "@element-plus/icons-vue";
             <Folder/>
           </el-icon>
           <span>历史记录下载</span>
+        </el-menu-item>
+        <el-menu-item index="/control">
+          <el-icon>
+            <Setting/>
+          </el-icon>
+          <span>手动控制</span>
         </el-menu-item>
       </el-menu>
     </el-aside>

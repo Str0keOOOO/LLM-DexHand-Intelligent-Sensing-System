@@ -10,7 +10,6 @@ import {
   Delete,
   UserFilled,
   Service,
-  Operation,
   Microphone
 } from '@element-plus/icons-vue'
 
@@ -129,21 +128,6 @@ function parseContent(content: string) {
             </template>
             <el-option v-for="item in modelOptions" :key="item.value" :label="item.label" :value="item.value"/>
           </el-select>
-
-          <el-tooltip content="打开手动控制面板" placement="top">
-            <el-button
-                class="action-btn"
-                size="small"
-                circle
-                type="primary"
-                plain
-                @click="emit('open-manual')"
-            >
-              <el-icon>
-                <Operation/>
-              </el-icon>
-            </el-button>
-          </el-tooltip>
 
           <el-tooltip content="清空对话历史" placement="top">
             <el-button class="action-btn" size="small" circle :disabled="isSending" @click="emit('clear', true)">

@@ -108,10 +108,6 @@ const controlDialogVisible = ref(false)
         </el-card>
       </el-col>
     </el-row>
-
-    <RobotManualControl
-        v-model="controlDialogVisible"
-    />
   </div>
 </template>
 

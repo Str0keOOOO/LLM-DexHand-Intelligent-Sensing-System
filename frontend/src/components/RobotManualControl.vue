@@ -8,7 +8,6 @@ import {useRobot} from "@/composable/hooks/useRobot.ts";
 const {handleReset} = useRobot()
 const controlLoading = ref(false)
 
-
 const controlForm = reactive<ControlForm>({
   hand: 'right',
   joints: {
@@ -20,8 +19,7 @@ const controlForm = reactive<ControlForm>({
   },
 })
 
-const visible = defineModel<boolean>({default: false})
-
+// 分组显示关节
 const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
   {name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip']},
   {name: 'Index (食指)', joints: ['ff_spr', 'ff_mcp', 'ff_dip']},
@@ -30,11 +28,9 @@ const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
   {name: 'Pinky (小指)', joints: ['lf_mcp', 'lf_dip']},
 ]
 
-
 async function handleSendControl() {
   controlLoading.value = true
   try {
-    // 修复类型冲突：强制转为 string 比较，或使用类型守卫
     const isLeft = String(controlForm.hand) === 'left'
     const prefix = isLeft ? 'l_' : 'r_'
     const jointsPayload: Record<string, number> = {}
@@ -57,7 +53,6 @@ async function handleSendControl() {
   }
 }
 
-// 物理复位确认弹窗
 async function confirmHardwareReset() {
   try {
     await ElMessageBox.confirm(
@@ -71,29 +66,28 @@ async function confirmHardwareReset() {
   }
 }
 
-
 function resetSliders() {
   for (const key in controlForm.joints) {
     (controlForm.joints as any)[key] = 0
   }
   handleSendControl()
 }
-
 </script>
 
 <template>
-  <el-dialog
-      v-model="visible"
-      title="手动关节控制 (Manual Control)"
-      width="550px"
-      destroy-on-close
-  >
+  <el-card class="manual-control-card" shadow="never">
+    <template #header>
+      <div class="card-header">
+        <span class="title">灵巧手关节控制 (DexHand Control)</span>
+      </div>
+    </template>
+
     <div class="control-panel">
       <div class="panel-section">
         <span class="label">目标手部：</span>
         <el-radio-group v-model="controlForm.hand" size="default">
-          <el-radio-button label="right">Right Hand (右手)</el-radio-button>
-          <el-radio-button label="left">Left Hand (左手)</el-radio-button>
+          <el-radio-button label="right">右手 (Right)</el-radio-button>
+          <el-radio-button label="left">左手 (Left)</el-radio-button>
         </el-radio-group>
       </div>
 
@@ -115,39 +109,30 @@ function resetSliders() {
           </div>
         </div>
       </div>
-    </div>
 
-    <template #footer>
-      <div class="dialog-footer"
-           style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-        <div class="danger-zone">
-          <el-button
-              type="danger"
-              plain
-              icon="Refresh"
-              @click="confirmHardwareReset"
-          >
-            物理复位(Reset)
-          </el-button>
-        </div>
+      <el-divider/>
 
-        <div class="standard-zone">
+      <div class="footer-actions">
+        <el-button type="danger" plain icon="Refresh" @click="confirmHardwareReset">
+          物理复位
+        </el-button>
+        <div class="right-buttons">
           <el-button @click="resetSliders">滑块归零</el-button>
-          <el-button
-              type="primary"
-              @click="handleSendControl"
-              :loading="controlLoading"
-          >
-            立即发送
+          <el-button type="primary" @click="handleSendControl" :loading="controlLoading">
+            发送指令
           </el-button>
         </div>
       </div>
-    </template>
-  </el-dialog>
+    </div>
+  </el-card>
 </template>
 
 <style scoped lang="scss">
-/* 保持你原有的样式逻辑 */
+.manual-control-card {
+  border-radius: 16px;
+  height: 100%;
+}
+
 .control-panel {
   padding: 0 10px;
 }
@@ -165,7 +150,7 @@ function resetSliders() {
 }
 
 .sliders-container {
-  max-height: 450px; /* 稍微调高了高度 */
+  max-height: 500px;
   overflow-y: auto;
   padding-right: 15px;
 }
@@ -210,10 +195,21 @@ function resetSliders() {
   width: 70px;
   font-size: 12px;
   color: #666;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: monospace;
 }
 
 .flex-slider {
   flex: 1;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.right-buttons {
+  display: flex;
+  gap: 10px;
 }
 </style>

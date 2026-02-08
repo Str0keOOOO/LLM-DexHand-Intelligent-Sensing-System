@@ -74,6 +74,12 @@ services:
     networks:
       - dexhand_net
 
+    # arm_service:
+    #   build: ./robotic_arm
+    #   container_name: robotic_arm_backend
+    #   networks:
+    #     - dexhand_net
+
 volumes:
   mysql_data:
   influxdb_data:
