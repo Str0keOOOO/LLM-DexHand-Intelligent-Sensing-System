@@ -1,4 +1,4 @@
-export type HandSide = 'left' | 'right'
+export type HandSide = 'right'
 
 // 具体的关节结构，用于 UI 绑定 (Manual Control)
 export interface JointsState {
@@ -27,7 +27,6 @@ export interface HandData {
 }
 
 export interface RobotState {
-    left: HandData
     right: HandData
     timestamp: number
 }
@@ -35,7 +34,6 @@ export interface RobotState {
 // 历史图表数据
 export interface HistoryData {
     time: string[]
-    leftForce: number[]
     rightForce: number[]
 }
 

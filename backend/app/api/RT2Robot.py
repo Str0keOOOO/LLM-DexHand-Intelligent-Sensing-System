@@ -32,9 +32,10 @@ async def send_control_command(request: Request, cmd: ControlCommand):
     if not bridge or not bridge.is_started():
         raise HTTPException(status_code=503, detail="ROS Bridge not initialized")
 
-    if cmd.hand not in ["left", "right"]:
-        raise HTTPException(status_code=400, detail="Invalid hand name. Must be 'left' or 'right'")
+    if cmd.hand != "right":
+        raise HTTPException(status_code=400, detail="Invalid hand name. Only 'right' is supported")
 
+    print(cmd)
     bridge.send_command(cmd.hand, cmd.joints)
 
     return {"status": "success", "sent_to": cmd.hand, "command_count": len(cmd.joints)}

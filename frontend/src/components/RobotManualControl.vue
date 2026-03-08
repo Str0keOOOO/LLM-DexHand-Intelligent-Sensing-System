@@ -9,7 +9,7 @@ const {handleReset} = useRobot()
 const controlLoading = ref(false)
 
 const controlForm = reactive<ControlForm>({
-  hand: 'right',
+  hand: 'right', // 默认写死右手
   joints: {
     th_dip: 0, th_mcp: 0, th_rot: 0,
     ff_spr: 0, ff_dip: 0, ff_mcp: 0,
@@ -19,32 +19,63 @@ const controlForm = reactive<ControlForm>({
   },
 })
 
-// 分组显示关节
+// 分组显示关节 (ff_spr 单独拿出来作为全局控制)
 const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
+  {name: 'Global (全局控制)', joints: ['ff_spr']},
   {name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip']},
-  {name: 'Index (食指)', joints: ['ff_spr', 'ff_mcp', 'ff_dip']},
+  {name: 'Index (食指)', joints: ['ff_mcp', 'ff_dip']},
   {name: 'Middle (中指)', joints: ['mf_mcp', 'mf_dip']},
   {name: 'Ring (无名指)', joints: ['rf_mcp', 'rf_dip']},
   {name: 'Pinky (小指)', joints: ['lf_mcp', 'lf_dip']},
 ]
 
+const jointLabels: Record<string, string> = {
+  ff_spr: '四指分开角度',
+  th_rot: '拇指旋转角度',
+  th_mcp: '拇指掌指关节弯曲',
+  th_dip: '拇指耦合近远端弯曲',
+  ff_mcp: '食指掌指关节弯曲',
+  ff_dip: '食指耦合近远端弯曲',
+  mf_mcp: '中指掌指关节弯曲',
+  mf_dip: '中指耦合近远端弯曲',
+  rf_mcp: '无名指掌指关节弯曲',
+  rf_dip: '无名指耦合近远端弯曲',
+  lf_mcp: '小指掌指关节弯曲',
+  lf_dip: '小指耦合近远端弯曲',
+}
+
+const jointLimits: Record<string, { min: number; max: number }> = {
+  ff_spr: {min: 0, max: 30},
+  th_rot: {min: 0, max: 90},
+  th_mcp: {min: 0, max: 90},
+  th_dip: {min: 0, max: 80},
+  ff_mcp: {min: 0, max: 90},
+  ff_dip: {min: 0, max: 80},
+  mf_mcp: {min: 0, max: 90},
+  mf_dip: {min: 0, max: 80},
+  rf_mcp: {min: 0, max: 90},
+  rf_dip: {min: 0, max: 80},
+  lf_mcp: {min: 0, max: 90},
+  lf_dip: {min: 0, max: 80},
+}
+
 async function handleSendControl() {
   controlLoading.value = true
   try {
-    const isLeft = String(controlForm.hand) === 'left'
-    const prefix = isLeft ? 'l_' : 'r_'
     const jointsPayload: Record<string, number> = {}
 
+    // 直接遍历前端表单纯净数据，只做度数 -> 弧度的转换
     for (const [key, val] of Object.entries(controlForm.joints)) {
-      jointsPayload[`${prefix}${key}`] = val
+      jointsPayload[key] = (Number(val) * Math.PI) / 180
     }
 
+    // 调用 API 发送指令 (强制右手)
     await sendControlCommand({
-      hand: controlForm.hand,
+      hand: 'right',
       joints: jointsPayload
     })
 
-    ElMessage.success(`指令已发送至 ${isLeft ? '左手' : '右手'}`)
+    ElMessage.success(`指令已发送至右手`)
   } catch (error) {
     console.error(error)
     ElMessage.error('发送失败，请检查连接')
@@ -62,7 +93,7 @@ async function confirmHardwareReset() {
     )
     await handleReset()
   } catch {
-    // 用户取消
+    // 用户取消操作
   }
 }
 
@@ -78,29 +109,23 @@ function resetSliders() {
   <el-card class="manual-control-card" shadow="never">
     <template #header>
       <div class="card-header">
-        <span class="title">灵巧手关节控制 (DexHand Control)</span>
+        <span class="title">灵巧手关节控制(右手)</span>
       </div>
     </template>
 
     <div class="control-panel">
-      <div class="panel-section">
-        <span class="label">目标手部：</span>
-        <el-radio-group v-model="controlForm.hand" size="default">
-          <el-radio-button label="right">右手 (Right)</el-radio-button>
-          <el-radio-button label="left">左手 (Left)</el-radio-button>
-        </el-radio-group>
-      </div>
-
       <div class="sliders-container">
         <div v-for="group in fingerGroups" :key="group.name" class="finger-group">
           <div class="group-title">{{ group.name }}</div>
 
           <div v-for="joint in group.joints" :key="String(joint)" class="slider-item">
-            <span class="joint-name">{{ joint }}</span>
+            <span class="joint-name">
+              {{ jointLabels[joint] }} <span class="joint-sub">({{ joint }})</span>
+            </span>
             <el-slider
                 v-model="controlForm.joints[joint]"
-                :min="0"
-                :max="180"
+                :min="jointLimits[joint]?.min ?? 0"
+                :max="jointLimits[joint]?.max ?? 180"
                 :step="1"
                 show-input
                 size="small"
@@ -135,18 +160,6 @@ function resetSliders() {
 
 .control-panel {
   padding: 0 10px;
-}
-
-.panel-section {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  .label {
-    font-weight: bold;
-    color: #333;
-  }
 }
 
 .sliders-container {
@@ -191,11 +204,21 @@ function resetSliders() {
   margin-bottom: 8px;
 }
 
+/* 调整了宽度以适应较长的中文名 */
 .joint-name {
-  width: 70px;
+  width: 180px;
   font-size: 12px;
-  color: #666;
+  color: #333;
+  display: flex;
+  flex-direction: column; /* 让英文副标题显示在第二行更整齐 */
+  line-height: 1.2;
+}
+
+.joint-sub {
+  color: #909399;
+  font-size: 0.9em;
   font-family: monospace;
+  margin-top: 2px;
 }
 
 .flex-slider {

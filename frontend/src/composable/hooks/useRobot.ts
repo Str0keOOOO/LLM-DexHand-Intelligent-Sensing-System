@@ -4,7 +4,6 @@ import {resetRobot} from "@/composable/api/Chat2Robot.ts";
 import {ElMessage} from 'element-plus'
 
 const robotState = ref<RobotState>({
-    left: {joints: {}, touch: [], motor: []},
     right: {joints: {}, touch: [], motor: []},
     timestamp: 0,
 });
@@ -41,7 +40,7 @@ export function useRobot() {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.left && data.right) {
+                if (data.right) {
                     robotState.value = data;
                 }
             } catch (e) {

@@ -20,7 +20,6 @@ const MAX_HISTORY_LEN = 50;
 
 const historyData: HistoryData = {
   time: [],
-  leftForce: [],
   rightForce: [],
 };
 
@@ -81,7 +80,7 @@ function initCharts() {
         data: MOTOR_NAMES,
         axisLabel: {interval: 0, rotate: 45, fontSize: 10}
       },
-      yAxis: {type: 'value', max: 120}, // 固定最大值防止跳动
+      yAxis: {type: 'value', max: 120},
       series: [
         {name: 'Left Hand', type: 'bar', itemStyle: {color: '#3b82f6'}, data: []},
         {name: 'Right Hand', type: 'bar', itemStyle: {color: '#8b5cf6'}, data: []}
@@ -96,12 +95,11 @@ function initCharts() {
       title: {text: 'Fingertip Forces (N)', left: 'center', textStyle: {fontSize: 14}},
       tooltip: {},
       radar: {
-        indicator: FINGER_NAMES.map(name => ({name, max: 5.0})), // 最大 5N
+        indicator: FINGER_NAMES.map(name => ({name, max: 20.0})),
       },
       series: [{
         type: 'radar',
         data: [
-          {value: [0, 0, 0, 0, 0], name: 'Left Hand', itemStyle: {color: '#3b82f6'}},
           {value: [0, 0, 0, 0, 0], name: 'Right Hand', itemStyle: {color: '#8b5cf6'}}
         ]
       }]
@@ -117,9 +115,8 @@ function initCharts() {
       legend: {bottom: 0, data: ['Left Total', 'Right Total']},
       grid: {left: '3%', right: '4%', bottom: '10%', containLabel: true},
       xAxis: {type: 'category', boundaryGap: false, data: []},
-      yAxis: {type: 'value'},
+      yAxis: {type: 'value', max: 100},
       series: [
-        {name: 'Left Total', type: 'line', smooth: true, areaStyle: {opacity: 0.2}, data: []},
         {name: 'Right Total', type: 'line', smooth: true, areaStyle: {opacity: 0.2}, data: []}
       ]
     });
@@ -136,7 +133,6 @@ function initCharts() {
       xAxis: {type: 'value', max: 200},
       yAxis: {type: 'category', data: MOTOR_NAMES, inverse: true},
       series: [
-        {name: 'Left Hand', type: 'bar', stack: null, itemStyle: {color: '#60a5fa'}, data: []},
         {name: 'Right Hand', type: 'bar', stack: null, itemStyle: {color: '#a78bfa'}, data: []}
       ]
     });
@@ -146,43 +142,36 @@ function initCharts() {
 watch(() => robotState.value, (newVal) => {
   if (!newVal || !postureChart) return;
 
-  const leftAngles = extractMotorAngles(newVal.left.motor);
   const rightAngles = extractMotorAngles(newVal.right.motor);
-  const leftForces = extractFingerForces(newVal.left.touch);
   const rightForces = extractFingerForces(newVal.right.touch);
-  const leftCurrents = extractMotorCurrents(newVal.left.motor);
   const rightCurrents = extractMotorCurrents(newVal.right.motor);
 
-  postureChart.setOption({series: [{data: leftAngles}, {data: rightAngles}]});
+  postureChart.setOption({series: [{data: rightAngles}]});
 
   radarChart?.setOption({
     series: [{
       data: [
-        {value: leftForces, name: 'Left Hand'},
         {value: rightForces, name: 'Right Hand'}
       ]
     }]
   });
 
-  healthChart?.setOption({series: [{data: leftCurrents}, {data: rightCurrents}]});
+  healthChart?.setOption({series: [{data: rightCurrents}]});
 
   const nowStr = new Date().toLocaleTimeString();
-  const leftTotal = leftForces.reduce((a, b) => a + b, 0);
   const rightTotal = rightForces.reduce((a, b) => a + b, 0);
 
   historyData.time.push(nowStr);
-  historyData.leftForce.push(leftTotal);
   historyData.rightForce.push(rightTotal);
 
   if (historyData.time.length > MAX_HISTORY_LEN) {
     historyData.time.shift();
-    historyData.leftForce.shift();
     historyData.rightForce.shift();
   }
 
   trendChart?.setOption({
     xAxis: {data: historyData.time},
-    series: [{data: historyData.leftForce}, {data: historyData.rightForce}]
+    series: [{data: historyData.rightForce}]
   });
 
 }, {deep: true});
