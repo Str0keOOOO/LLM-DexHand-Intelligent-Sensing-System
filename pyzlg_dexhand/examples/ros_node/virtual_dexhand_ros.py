@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 from ros_compat import ROSNode
-from std_msgs.msg import Float64MultiArray, MultiArrayDimension
+from std_msgs.msg import Float64MultiArray
 from std_srvs.srv import Trigger
 from sensor_msgs.msg import JointState
 import numpy as np
@@ -11,7 +10,6 @@ import os.path
 import random
 import math
 from types import SimpleNamespace
-
 
 joint_names = [
     "th_dip",
@@ -39,7 +37,7 @@ class HardwareMapping(Enum):
     mf_dip = ("mf_dip", ["f_joint3_3", "f_joint3_4"])
     mf_mcp = ("mf_mcp", ["f_joint3_2"])
     rf_dip = ("rf_dip", ["f_joint4_3", "f_joint4_4"])
-    rc_mcp = ("rf_mcp", ["f_joint4_2"])
+    rf_mcp = ("rf_mcp", ["f_joint4_2"])
     lf_dip = ("lf_dip", ["f_joint5_3", "f_joint5_4"])
     lf_mcp = ("lf_mcp", ["f_joint5_2"])
 
@@ -81,14 +79,12 @@ class DexHandNode(ROSNode):
     def __init__(self, config: dict):
         super().__init__("dexhand")
         self.hands_list = config.get("hands", ["right"])
-        send_rate = config.get("rate", 100.0)
+        self.send_rate = config.get("rate", 60.0)
         self.start_time = time.time()
 
-        # 手动控制状态
         self.manual_override_until = 0.0
         self.last_manual_positions = {}
-        for hand in self.hands_list:
-            self.last_manual_positions[hand] = {j: 0.0 for j in joint_names}
+        self.prev_simulated_state = {}  # 用于计算速度
 
         self.topic_config = {
             "left": {"command": "/left_hand/joint_commands", "joint_feedback": "/left_hand/joint_states", "touch_feedback": "/left_hand/touch_sensors", "motor_feedback": "/left_hand/motor_feedback"},
@@ -103,7 +99,6 @@ class DexHandNode(ROSNode):
         self.joint_mappings = {}
         self.simulated_state = {}
         self.fingertip_mapping = {"th": 0, "ff": 1, "mf": 2, "rf": 3, "lf": 4}
-        self.kalman_filters = {}
 
         self.joint_state_pubs = {}
         self.touch_sensor_pubs = {}
@@ -111,6 +106,8 @@ class DexHandNode(ROSNode):
 
         for hand in self.hands_list:
             self.simulated_state[hand] = {joint: 0.0 for joint in joint_names}
+            self.prev_simulated_state[hand] = {joint: 0.0 for joint in joint_names}
+            self.last_manual_positions[hand] = {joint: 0.0 for joint in joint_names}
             self.joint_mappings[hand] = JointMapping("l" if hand == "left" else "r")
 
             self.create_subscription(JointState, self.topic_config[hand]["command"], lambda msg, h=hand: self.command_callback(msg, h))
@@ -119,20 +116,16 @@ class DexHandNode(ROSNode):
             self.motor_feedback_pubs[hand] = self.create_publisher(Float64MultiArray, self.topic_config[hand]["motor_feedback"], 10)
 
         self.create_service(Trigger, "/reset_hands", self.reset_callback)
-        self.timer = self.create_timer(1.0 / send_rate, self.send_commands)
-        self.logger.info("DexHand Asymmetric Demo Node Started")
+        self.timer = self.create_timer(1.0 / self.send_rate, self.send_commands)
 
     def command_callback(self, msg: JointState, hand: str):
-        try:
-            self.manual_override_until = time.time() + 5.0
-            mapping = self.joint_mappings[hand]
-            joint_values_urdf = {n: p for n, p in zip(msg.name, msg.position) if not math.isnan(p)}
-            hw_commands = mapping.map_command(joint_values_urdf)
-            for joint, val in hw_commands.items():
-                if joint in self.last_manual_positions[hand]:
-                    self.last_manual_positions[hand][joint] = val
-        except Exception:
-            pass
+        self.manual_override_until = time.time() + 5.0
+        mapping = self.joint_mappings[hand]
+        joint_values_urdf = {n: p for n, p in zip(msg.name, msg.position) if not math.isnan(p)}
+        hw_commands = mapping.map_command(joint_values_urdf)
+        for joint, val in hw_commands.items():
+            if joint in self.last_manual_positions[hand]:
+                self.last_manual_positions[hand][joint] = val
 
     def send_commands(self):
         for hand in self.hands_list:
@@ -141,92 +134,86 @@ class DexHandNode(ROSNode):
     def process_and_publish_feedback(self, hand: str):
         try:
             is_manual = time.time() < self.manual_override_until
+            dt = 1.0 / self.send_rate
+            t = time.time() - self.start_time
+
+            # 1. 更新模拟状态
+            for k in joint_names:
+                self.prev_simulated_state[hand][k] = self.simulated_state[hand][k]
 
             if is_manual:
-                target_state = self.last_manual_positions[hand]
-                for k, v in target_state.items():
+                for k, v in self.last_manual_positions[hand].items():
                     self.simulated_state[hand][k] = v
+                base_force = 1.5 + math.sin(t) * 0.5
             else:
-                t = time.time() - self.start_time
+                # 自动正弦波模拟
+                cycle_angle = (math.sin(t * 2.0) + 1) / 2
+                base_angle = 20.0 + 60.0 * cycle_angle
+                base_force = 1.0 + 2.0 * cycle_angle
+                for k in joint_names:
+                    self.simulated_state[hand][k] = base_angle + random.uniform(-1, 1)
 
-                if hand == "left":
-                    cycle_angle = (math.sin(t * 2.5) + 1) / 2
-                    cycle_force = (math.sin(t * 1.5) + 1) / 2
-                    base_angle = 10.0 + 80.0 * cycle_angle
-                    base_force = 0.5 + 3.0 * cycle_force
-                else:
-                    cycle_angle = (math.sin(t * 2.0 + math.pi) + 1) / 2
-                    cycle_force = (math.cos(t * 2.0) + 1) / 2
-                    base_angle = 20.0 + 60.0 * cycle_angle
-                    base_force = 1.0 + 4.0 * cycle_force
-
-                for k in self.simulated_state[hand]:
-                    self.simulated_state[hand][k] = base_angle + random.uniform(-2, 2)
-
-            feedback = SimpleNamespace(joints={}, touch={})
+            # 2. 准备数据结构
             current_state = self.simulated_state[hand]
+            prev_state = self.prev_simulated_state[hand]
 
-            avg_angle = sum(current_state.values()) / len(current_state)
-            if is_manual:
-                force_val = (avg_angle / 90.0) * 3.0
-            else:
-                force_val = base_force if "base_force" in locals() else 0.0
-
-            for joint in joint_names:
-                ang = current_state.get(joint, 0.0)
-                jd = SimpleNamespace()
-                jd.angle = ang
-                jd.encoder_position = int(ang * 10) + 2048
-                jd.current = 50 + ang + random.uniform(-2, 2)
-                jd.velocity = 0.0
-                jd.error_code = 0
-                jd.impedance = 1.0
-                feedback.joints[joint] = jd
-
-            for f in ["th", "ff", "mf", "rf", "lf"]:
-                td = SimpleNamespace()
-                td.timestamp = time.time_ns()
-                td.normal_force = max(0, force_val + random.uniform(-0.2, 0.2))
-                td.direction = -1
-                td.temperature = 25.0 + random.uniform(-0.5, 0.5)
-                feedback.touch[f] = td
-
-            pos_dict = {k: v.angle for k, v in feedback.joints.items()}
-            pos_dict_urdf = self.joint_mappings[hand].map_feedback(pos_dict)
+            # 3. 发布 JointState (供后端生成 joints 和 velocities 字典)
             js = JointState()
             js.header.stamp = self.get_ros_time().to_msg()
             js.name = self.joint_mappings[hand].joint_names
-            js.position = [pos_dict_urdf.get(j, 0.0) for j in js.name]
-            js.velocity = [0.0] * len(js.name)
+
+            # 计算速度并映射到 URDF 关节
+            pos_dict = current_state
+            vel_dict = {k: (current_state[k] - prev_state[k]) / dt for k in joint_names}
+
+            pos_urdf = self.joint_mappings[hand].map_feedback(pos_dict)
+            vel_urdf = self.joint_mappings[hand].map_feedback(vel_dict)
+
+            js.position = [pos_urdf.get(j, 0.0) for j in js.name]
+            js.velocity = [vel_urdf.get(j, 0.0) for j in js.name]
             self.joint_state_pubs[hand].publish(js)
 
+            # 4. 发布 Touch Sensors (Float64MultiArray 长度 40)
             touch_msg = Float64MultiArray()
             touch_msg.data = [0.0] * 40
-            for fname, tdata in feedback.touch.items():
-                if fname in self.fingertip_mapping:
-                    idx = self.fingertip_mapping[fname]
-                    touch_msg.data[idx * 8] = tdata.timestamp / 1e9
-                    touch_msg.data[idx * 8 + 1] = tdata.normal_force
-                    touch_msg.data[idx * 8 + 7] = tdata.temperature
+            for fname, idx in self.fingertip_mapping.items():
+                base = idx * 8
+                touch_msg.data[base] = time.time()  # timestamp
+                touch_msg.data[base + 1] = max(0, base_force + random.uniform(-0.1, 0.1))  # normal_force
+                touch_msg.data[base + 2] = random.uniform(-0.05, 0.05)  # normal_force_delta
+                touch_msg.data[base + 3] = touch_msg.data[base + 1] * 0.2  # tangential_force
+                touch_msg.data[base + 4] = 0.01  # tangential_force_delta
+                touch_msg.data[base + 5] = random.randint(0, 359)  # direction
+                touch_msg.data[base + 6] = 500 + 1000 * (touch_msg.data[base + 1] / 5.0)  # proximity (不再是0)
+                touch_msg.data[base + 7] = 25.0 + random.uniform(-0.2, 0.2)  # temperature
             self.touch_sensor_pubs[hand].publish(touch_msg)
 
+            # 5. 发布 Motor Feedback (Float64MultiArray 长度 84)
+            # 索引规则: timestamp, angle, encoder, current, velocity, error, impedance
             motor_msg = Float64MultiArray()
             motor_msg.data = [0.0] * 84
-            cur_time = time.time()
             for idx, name in enumerate(joint_names):
-                jd = feedback.joints[name]
                 base = idx * 7
-                motor_msg.data[base] = cur_time
-                motor_msg.data[base + 1] = jd.angle
-                motor_msg.data[base + 3] = jd.current
+                ang = current_state[name]
+                motor_msg.data[base] = time.time()  # timestamp
+                motor_msg.data[base + 1] = ang  # angle
+                motor_msg.data[base + 2] = int(ang * 45.5) + 2048  # encoder_position (模拟非0)
+                motor_msg.data[base + 3] = 80 + ang + random.uniform(-5, 5)  # current
+                motor_msg.data[base + 4] = vel_dict[name]  # velocity
+                motor_msg.data[base + 5] = 0  # error_code
+                motor_msg.data[base + 6] = 1.0 + random.uniform(-0.1, 0.1)  # impedance
             self.motor_feedback_pubs[hand].publish(motor_msg)
 
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Simulation Error: {e}")
 
     def reset_callback(self, req, res):
+        self.start_time = time.time()
+        for hand in self.hands_list:
+            for k in joint_names:
+                self.simulated_state[hand][k] = 0.0
         res.success = True
-        res.message = "Reset"
+        res.message = "Virtual Hand Reset"
         return res
 
     def on_shutdown(self):
@@ -234,12 +221,13 @@ class DexHandNode(ROSNode):
 
 
 if __name__ == "__main__":
-    import os
-
     config_path = os.path.join(os.path.dirname(__file__), "../../config", "config.yaml")
     try:
         with open(config_path) as f:
             config = yaml.safe_load(f)
-        DexHandNode(config["DexHand"]["ROS_Node"]).spin()
+        node = DexHandNode(config["DexHand"]["ROS_Node"])
+        print("DexHand ROS Node started successfully.")
+        node.spin()
+        print("DexHand ROS Node stopped.")
     except Exception as e:
-        print(e)
+        print(f"Failed to start node: {e}")

@@ -23,12 +23,10 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 虚拟
 
-修改mock:True
-
 ```powershell
 wsl -d Ubuntu-22.04
 conda activate ldiss
-python examples/ros_node/dexhand_ros.py
+python examples/ros_node/virtual_dexhand_ros.py
 ```
 非虚拟
 
