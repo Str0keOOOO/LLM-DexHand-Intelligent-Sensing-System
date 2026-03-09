@@ -1,9 +1,9 @@
-import json
 import time
+import math
 import asyncio
 
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, FastAPI, Request, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
 
 from app.ros.bridge import ROSBridgeManager
 from app.schemas import ControlCommand
@@ -36,8 +36,8 @@ async def send_control_command(request: Request, cmd: ControlCommand):
     if cmd.hand != "right":
         raise HTTPException(status_code=400, detail="Invalid hand name. Only 'right' is supported")
 
-    print(cmd)
-    bridge.send_command(cmd.hand, cmd.joints)
+    rad_joints = {k: (v * math.pi / 180.0) for k, v in cmd.joints.items()}
+    bridge.send_command(cmd.hand, rad_joints)
 
     return {"status": "success", "sent_to": cmd.hand, "command_count": len(cmd.joints)}
 
@@ -49,12 +49,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         while True:
-            # 获取最新状态
             data = bridge.get_latest_state()
-
-            # 【关键修改】：判断 ROS 节点是否启动，并且时间戳是否在最近 1 秒内更新过
-            # 如果硬件断连，ROS topic 停止发布，timestamp 将不再更新
-            import time
 
             is_alive = bool(data and (time.time() - data.get("timestamp", 0) < 1.0))
             ros_active = bool(bridge and bridge.is_started() and is_alive)
@@ -64,13 +59,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     {
                         "ros_active": False,
                         "timestamp": time.time(),
-                        "right": None,  # 清空旧数据
+                        "right": None,
                     }
                 )
                 await asyncio.sleep(1.0)
                 continue
 
-            # 注入状态并发送
             data["ros_active"] = True
             await websocket.send_json(data)
             await asyncio.sleep(0.05)

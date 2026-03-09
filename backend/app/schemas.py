@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
-
+# TODO 写完机械臂整理一下
 
 # --- 1. 基础控制指令 (提前定义以供引用) ---
 class ControlCommand(BaseModel):

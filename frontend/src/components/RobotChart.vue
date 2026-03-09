@@ -4,20 +4,15 @@ import * as echarts from 'echarts';
 import {useRobot} from '@/composable/hooks/useRobot';
 
 const {robotState} = useRobot();
-// --- 1. DOM 引用 ---
-// 语义关节 (2个)
+
 const postureChartRef = ref<HTMLElement | null>(null);
 const velocityChartRef = ref<HTMLElement | null>(null);
-
-// 电机原始数据 (6个)
 const mAngleRef = ref<HTMLElement | null>(null);
 const mEncRef = ref<HTMLElement | null>(null);
 const mCurRef = ref<HTMLElement | null>(null);
 const mVelRef = ref<HTMLElement | null>(null);
 const mErrRef = ref<HTMLElement | null>(null);
 const mImpRef = ref<HTMLElement | null>(null);
-
-// 触觉数据 (7个)
 const normForceRef = ref<HTMLElement | null>(null);
 const normDeltaRef = ref<HTMLElement | null>(null);
 const tangForceRef = ref<HTMLElement | null>(null);
@@ -32,10 +27,10 @@ const FINGER_NAMES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
 const MOTOR_NAMES = ['TH_DIP', 'TH_MCP', 'TH_ROT', 'FF_SPR', 'FF_DIP', 'FF_MCP', 'MF_DIP', 'MF_MCP', 'RF_DIP', 'RF_MCP', 'LF_DIP', 'LF_MCP'];
 const SEMANTIC_ORDER = ["th_dip", "th_mcp", "th_rot", "ff_spr", "ff_dip", "ff_mcp", "mf_dip", "mf_mcp", "rf_dip", "rf_mcp", "lf_dip", "lf_mcp"];
 
-// 辅助函数：提取语义关节字典的值
-const getOrderedData = (map: Record<string, number> = {}) => SEMANTIC_ORDER.map(k => Number((map[k] || 0).toFixed(1)));
+function getOrderedData(map: Record<string, number> = {}) {
+  return SEMANTIC_ORDER.map((k) => Number((map[k] || 0).toFixed(1)));
+}
 
-// 图表工厂函数
 function createBarChart(dom: HTMLElement | null, title: string, xAxisData: string[], color: string, min: number = 0, max: number = 100) {
   if (!dom) return null;
   const chart = echarts.init(dom);
@@ -56,50 +51,37 @@ function createBarChart(dom: HTMLElement | null, title: string, xAxisData: strin
 }
 
 function initCharts() {
-  // --- 1. 语义关节图 (2个) ---
   charts.posture = createBarChart(postureChartRef.value, 'Joint Positions (Deg)', MOTOR_NAMES, '#8b5cf6', 0, 90);
   charts.velocity = createBarChart(velocityChartRef.value, 'Joint Velocities (Deg/s)', MOTOR_NAMES, '#10b981', -5, 5);
-
-  // --- 3. 触觉图 (7个) ---
   charts.normF = createBarChart(normForceRef.value, 'Normal Force (N)', FINGER_NAMES, '#3b82f6', 0, 20);
   charts.normD = createBarChart(normDeltaRef.value, 'Normal Force Delta', FINGER_NAMES, '#60a5fa', 0, 30000000);
   charts.tangF = createBarChart(tangForceRef.value, 'Tangential Force (N)', FINGER_NAMES, '#0ea5e9', 0, 20);
   charts.tangD = createBarChart(tangDeltaRef.value, 'Tangential Force Delta', FINGER_NAMES, '#38bdf8', 0, 30000000);
   charts.dir = createBarChart(dirRef.value, 'Direction (0-359°)', FINGER_NAMES, '#8b5cf6', 0, 360);
-  charts.prox = createBarChart(proxRef.value, 'Proximity', FINGER_NAMES, '#f97316',0,4060);
+  charts.prox = createBarChart(proxRef.value, 'Proximity', FINGER_NAMES, '#f97316', 0, 4060);
   charts.temp = createBarChart(tempRef.value, 'Temperature (°C)', FINGER_NAMES, '#ef4444', 0, 40);
-
-  // --- 2. 电机底层图 (6个) ---
   charts.mAngle = createBarChart(mAngleRef.value, 'Motor Angle (Deg)', MOTOR_NAMES, '#6366f1',);
   charts.mVel = createBarChart(mVelRef.value, 'Motor Velocity (rpm)', MOTOR_NAMES, '#14b8a6');
   charts.mCur = createBarChart(mCurRef.value, 'Motor Current (mA)', MOTOR_NAMES, '#f59e0b');
   charts.mEnc = createBarChart(mEncRef.value, 'Encoder Position', MOTOR_NAMES, '#3b82f6');
   charts.mErr = createBarChart(mErrRef.value, 'Error Code (0=Normal)', MOTOR_NAMES, '#ef4444');
   charts.mImp = createBarChart(mImpRef.value, 'Impedance', MOTOR_NAMES, '#a855f7');
-
-
 }
 
-// 监听数据同步
 watch(() => robotState.value, (newVal) => {
   if (!newVal || !newVal.right.motor || !newVal.right.touch) return;
   const r = newVal.right;
   const m = r.motor;
   const t = r.touch;
 
-  // 渲染语义关节 (从字典取值)
-  charts.posture?.setOption({series: [{data: getOrderedData(r.joints)}]});
-  charts.velocity?.setOption({series: [{data: getOrderedData(r.velocities)}]});
-
-  // 渲染电机底层 (从数组取值)
+  charts.posture?.setOption({series: [{data: getOrderedData(r.joint.position)}]});
+  charts.velocity?.setOption({series: [{data: getOrderedData(r.joint.velocity)}]});
   charts.mAngle?.setOption({series: [{data: m.angle || []}]});
   charts.mVel?.setOption({series: [{data: m.velocity || []}]});
   charts.mCur?.setOption({series: [{data: m.current || []}]});
   charts.mEnc?.setOption({series: [{data: m.encoder_position || []}]});
   charts.mErr?.setOption({series: [{data: m.error_code || []}]});
   charts.mImp?.setOption({series: [{data: m.impedance || []}]});
-
-  // 渲染触觉
   charts.normF?.setOption({series: [{data: t.normal_force || []}]});
   charts.normD?.setOption({series: [{data: t.normal_force_delta || []}]});
   charts.tangF?.setOption({series: [{data: t.tangential_force || []}]});

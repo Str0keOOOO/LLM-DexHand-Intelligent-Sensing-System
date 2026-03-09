@@ -9,7 +9,7 @@ const {handleReset, isConnected} = useRobot()
 const controlLoading = ref(false)
 
 const controlForm = reactive<ControlForm>({
-  hand: 'right', // 默认写死右手
+  hand: 'right',
   joints: {
     th_dip: 0, th_mcp: 0, th_rot: 0,
     ff_spr: 0, ff_dip: 0, ff_mcp: 0,
@@ -19,7 +19,6 @@ const controlForm = reactive<ControlForm>({
   },
 })
 
-// 分组显示关节 (ff_spr 单独拿出来作为全局控制)
 const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
   {name: 'Global (全局控制)', joints: ['ff_spr']},
   {name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip']},
@@ -67,14 +66,8 @@ async function handleSendControl() {
 
   controlLoading.value = true
   try {
-    const jointsPayload: Record<string, number> = {}
+    const jointsPayload: Record<string, number> = {...controlForm.joints};
 
-    // 直接遍历前端表单纯净数据，只做度数 -> 弧度的转换
-    for (const [key, val] of Object.entries(controlForm.joints)) {
-      jointsPayload[key] = (Number(val) * Math.PI) / 180
-    }
-
-    // 调用 API 发送指令 (强制右手)
     await sendControlCommand({
       hand: 'right',
       joints: jointsPayload
@@ -209,13 +202,12 @@ function resetSliders() {
   margin-bottom: 8px;
 }
 
-/* 调整了宽度以适应较长的中文名 */
 .joint-name {
   width: 180px;
   font-size: 12px;
   color: #333;
   display: flex;
-  flex-direction: column; /* 让英文副标题显示在第二行更整齐 */
+  flex-direction: column;
   line-height: 1.2;
 }
 

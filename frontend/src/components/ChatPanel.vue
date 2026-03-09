@@ -34,7 +34,7 @@ const emit = defineEmits<{
   (e: 'send'): void
   (e: 'clear', hard: boolean): void
   (e: 'open-manual'): void
-  (e: 'toggle-recording'): void // 3. 增加切换录音的事件
+  (e: 'toggle-recording'): void
 }>()
 
 const selectedModelModel = computed({

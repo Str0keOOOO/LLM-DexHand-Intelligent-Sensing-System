@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useArm } from '@/composable/hooks/useArm';
+import {ref} from 'vue';
+import {useArm} from '@/composable/hooks/useArm';
 
 const {
   isConnected, jointPositions, currentLine, isRunning,
@@ -39,7 +39,8 @@ const scriptName = ref('default_track');
     <div class="state-display">
       <h4 class="section-title">实时状态</h4>
       <p class="state-item">
-        当前运行行号: <el-tag effect="dark" size="small">{{ currentLine }}</el-tag>
+        当前运行行号:
+        <el-tag effect="dark" size="small">{{ currentLine }}</el-tag>
       </p>
       <p class="state-item">关节位置 (度):</p>
       <div class="joint-list">
@@ -78,7 +79,11 @@ const scriptName = ref('default_track');
   display: flex;
   justify-content: space-between;
   align-items: center;
-  .title { font-weight: 600; font-size: 16px; }
+
+  .title {
+    font-weight: 600;
+    font-size: 16px;
+  }
 }
 
 .gripper-controls {

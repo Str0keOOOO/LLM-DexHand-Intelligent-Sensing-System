@@ -14,12 +14,13 @@ class BackendBridgeNode(Node):
     def __init__(self):
         super().__init__("backend_bridge_node")
 
-        # 统一初始化结构，确保所有维度都有默认值
         self.global_state = {
             "right": {
-                "joints": {},  # 12个语义关节位置 (Deg)
-                "velocities": {},  # 12个语义关节速度 (Deg/s)
-                "touch": {  # 7个触觉维度
+                "joint": {
+                    "position": {},
+                    "velocity": {},
+                },
+                "touch": {
                     "normal_force": [],
                     "normal_force_delta": [],
                     "tangential_force": [],
@@ -28,7 +29,7 @@ class BackendBridgeNode(Node):
                     "proximity": [],
                     "temperature": [],
                 },
-                "motor": {  # 6个电机维度
+                "motor": {
                     "angle": [],
                     "encoder_position": [],
                     "current": [],
@@ -105,14 +106,14 @@ class BackendBridgeNode(Node):
             return {n: temp_sums[n] / temp_counts[n] for n in temp_sums}
 
         # 更新语义关节位置和速度
-        self.global_state["right"]["joints"] = process_metric(msg.name, msg.position, convert_to_deg=True)
-        self.global_state["right"]["velocities"] = process_metric(msg.name, msg.velocity, convert_to_deg=True)
+        self.global_state["right"]["joint"]["position"] = process_metric(msg.name, msg.position, convert_to_deg=True)
+        self.global_state["right"]["joint"]["velocity"] = process_metric(msg.name, msg.velocity, convert_to_deg=True)
         self.global_state["timestamp"] = time.time()
 
         # InfluxDB 写入
         now_ns = time.time_ns()
         try:
-            for metric, data in [("dexhand_joints", self.global_state["right"]["joints"]), ("dexhand_velocities", self.global_state["right"]["velocities"])]:
+            for metric, data in [("dexhand_position", self.global_state["right"]["joint"]["position"]), ("dexhand_velocity", self.global_state["right"]["joint"]["velocity"])]:
                 if data:
                     p = Point(metric).tag("hand", "right").time(now_ns)
                     for name, val in data.items():

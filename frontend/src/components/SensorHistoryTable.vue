@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
-import {getSensorHistory} from '@/composable/api/Chat2DB'
-import type {SensorItem} from "@/composable/types/robot";
-import {ElMessage} from 'element-plus'
+import { ref, onMounted } from 'vue'
+import { getSensorHistory } from '@/composable/api/Chat2DB'
+import type { MeasurementType, SensorItem } from '@/composable/types/robot'
+import { ElMessage } from 'element-plus'
 
 const tableData = ref<SensorItem[]>([])
 const loading = ref(false)
@@ -34,10 +34,10 @@ function formatDataSummary(item: any) {
     return Object.entries(item.data).map(([k, v]) => `${k}:${Number(v).toFixed(1)}°`).join(' | ')
   }
   if (selectedCategory.value === 'dexhand_touch') {
-    return `Normal Force: [${item.data.normal_force.map(v => v.toFixed(2)).join(', ')}]`
+    return `Normal Force: [${item.data.normal_force.map((v: number) => v.toFixed(2)).join(', ')}]`
   }
   if (selectedCategory.value === 'dexhand_motor') {
-    return `Angles: [${item.data.angle.map(v => v.toFixed(1)).join(', ')}]`
+    return `Angles: [${item.data.angle.map((v: number) => v.toFixed(1)).join(', ')}]`
   }
   return JSON.stringify(item.data)
 }
