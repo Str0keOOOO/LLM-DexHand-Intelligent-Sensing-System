@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import {RouterView} from 'vue-router'
-import {Cpu, Document, Monitor, Folder, Setting} from "@element-plus/icons-vue";
+import { RouterView, useRoute } from 'vue-router' // 引入 useRoute
+import { Cpu, Document, Monitor, Folder, Setting, DataLine } from "@element-plus/icons-vue"; //
+
+const route = useRoute(); // 初始化路由实例以获取当前路径
 </script>
 
 <template>
@@ -19,7 +21,7 @@ import {Cpu, Document, Monitor, Folder, Setting} from "@element-plus/icons-vue";
           active-text-color="#fff"
           background-color="transparent"
           class="el-menu-vertical"
-          default-active="/"
+          :default-active="route.path"
           text-color="#a6adb4"
           router
       >
@@ -28,6 +30,12 @@ import {Cpu, Document, Monitor, Folder, Setting} from "@element-plus/icons-vue";
             <Monitor/>
           </el-icon>
           <span>智能采集控制台</span>
+        </el-menu-item>
+        <el-menu-item index="/chart">
+          <el-icon>
+            <DataLine/>
+          </el-icon>
+          <span>数据监控</span>
         </el-menu-item>
         <el-menu-item index="/about">
           <el-icon>

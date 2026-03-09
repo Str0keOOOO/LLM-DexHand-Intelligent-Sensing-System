@@ -1,4 +1,5 @@
 import json
+import time
 import asyncio
 
 
@@ -43,27 +44,36 @@ async def send_control_command(request: Request, cmd: ControlCommand):
 
 @router.websocket("/robot-data")
 async def websocket_endpoint(websocket: WebSocket):
-    """
-    实时推送所有传感器数据 (Joints, Touch, Motor)
-    """
     await websocket.accept()
-    bridge = websocket.app.state.ros_bridge
+    bridge: ROSBridgeManager = getattr(websocket.app.state, "ros_bridge", None)
 
     try:
         while True:
-            if not bridge or not bridge.is_started():
+            # 获取最新状态
+            data = bridge.get_latest_state()
+
+            # 【关键修改】：判断 ROS 节点是否启动，并且时间戳是否在最近 1 秒内更新过
+            # 如果硬件断连，ROS topic 停止发布，timestamp 将不再更新
+            import time
+
+            is_alive = bool(data and (time.time() - data.get("timestamp", 0) < 1.0))
+            ros_active = bool(bridge and bridge.is_started() and is_alive)
+
+            if not ros_active:
+                await websocket.send_json(
+                    {
+                        "ros_active": False,
+                        "timestamp": time.time(),
+                        "right": None,  # 清空旧数据
+                    }
+                )
                 await asyncio.sleep(1.0)
                 continue
 
-            data = bridge.get_latest_state()
-
-            if not data:
-                await asyncio.sleep(0.1)
-                continue
-
-            await websocket.send_text(json.dumps(data))
-
-            await asyncio.sleep(0.016)
+            # 注入状态并发送
+            data["ros_active"] = True
+            await websocket.send_json(data)
+            await asyncio.sleep(0.05)
 
     except WebSocketDisconnect:
         print("WS Client disconnected")

@@ -5,7 +5,7 @@ import {reactive, ref} from "vue";
 import type {JointsState, ControlForm} from "@/composable/types/robot";
 import {useRobot} from "@/composable/hooks/useRobot.ts";
 
-const {handleReset} = useRobot()
+const {handleReset, isConnected} = useRobot()
 const controlLoading = ref(false)
 
 const controlForm = reactive<ControlForm>({
@@ -60,6 +60,11 @@ const jointLimits: Record<string, { min: number; max: number }> = {
 }
 
 async function handleSendControl() {
+  if (!isConnected.value) { //
+    ElMessage.error('无法发送指令：机器人通讯未连接')
+    return
+  }
+
   controlLoading.value = true
   try {
     const jointsPayload: Record<string, number> = {}

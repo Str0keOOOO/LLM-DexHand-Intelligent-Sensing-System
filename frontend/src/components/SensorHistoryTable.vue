@@ -8,27 +8,38 @@ const tableData = ref<SensorItem[]>([])
 const loading = ref(false)
 const selectedHand = ref('right')
 const queryMinutes = ref(1)
+const selectedCategory = ref<MeasurementType>('dexhand_joints')
 
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getSensorHistory(queryMinutes.value, selectedHand.value)
-
+    const res = await getSensorHistory(
+        selectedCategory.value, // 使用选择的分类
+        queryMinutes.value,
+        selectedHand.value
+    )
     if (res && res.data) {
-      tableData.value = res.data.sort((a, b) =>
-          new Date(b.time).getTime() - new Date(a.time).getTime()
-      )
-
-      if (tableData.value.length === 0) {
-        ElMessage.info('该时间段内暂无传感器数据')
-      }
+      tableData.value = res.data // 后端已完成排序
+      if (tableData.value.length === 0) ElMessage.info('该时间段内暂无数据')
     }
   } catch (error) {
-    console.error('Failed to fetch sensor history:', error)
-    ElMessage.error('获取历史数据失败，请检查后端服务')
+    ElMessage.error('获取历史数据失败')
   } finally {
     loading.value = false
   }
+}
+
+function formatDataSummary(item: any) {
+  if (selectedCategory.value.includes('joints')) {
+    return Object.entries(item.data).map(([k, v]) => `${k}:${Number(v).toFixed(1)}°`).join(' | ')
+  }
+  if (selectedCategory.value === 'dexhand_touch') {
+    return `Normal Force: [${item.data.normal_force.map(v => v.toFixed(2)).join(', ')}]`
+  }
+  if (selectedCategory.value === 'dexhand_motor') {
+    return `Angles: [${item.data.angle.map(v => v.toFixed(1)).join(', ')}]`
+  }
+  return JSON.stringify(item.data)
 }
 
 function downloadCSV() {
@@ -64,71 +75,36 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="history-panel">
-    <div class="header">
-      <div class="title-area">
-        <h3>📈 Sensor History</h3>
-        <span class="status-tag" :class="selectedHand">
-          {{ selectedHand.toUpperCase() }} ({{ tableData.length }} rows)
-        </span>
-      </div>
-
-      <div class="controls">
-        <div class="select-group">
-          <label>Hand:</label>
-          <select v-model="selectedHand" @change="fetchData" :disabled="loading">
-            <option value="right">Right Hand</option>
-            <option value="left">Left Hand</option>
-          </select>
-        </div>
-
-        <div class="select-group">
-          <label>Range:</label>
-          <select v-model="queryMinutes" @change="fetchData" :disabled="loading">
-            <option :value="1">Last 1 Min</option>
-            <option :value="5">Last 5 Mins</option>
-            <option :value="10">Last 10 Mins</option>
-            <option :value="30">Last 30 Mins</option>
-          </select>
-        </div>
-
-        <button @click="fetchData" :disabled="loading" class="refresh-btn">
-          {{ loading ? 'Loading...' : 'Refresh' }}
-        </button>
-
-        <button @click="downloadCSV" class="download-btn" :disabled="tableData.length === 0 || loading">
-          ⬇ CSV
-        </button>
-      </div>
+  <div class="controls">
+    <div class="select-group">
+      <label>Category:</label>
+      <select v-model="selectedCategory" @change="fetchData" :disabled="loading">
+        <option value="dexhand_joints">Semantic Joints</option>
+        <option value="dexhand_touch">Touch Sensors</option>
+        <option value="dexhand_motor">Motor Feedback</option>
+      </select>
     </div>
+  </div>
 
-    <div class="table-container" v-loading="loading">
-      <table>
-        <thead>
-        <tr>
-          <th>Time</th>
-          <th>Side</th>
-          <th>Sensor ID (Field)</th>
-          <th>Value</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="(item, index) in tableData" :key="index">
-          <td class="time">{{ new Date(item.time).toLocaleTimeString() }}</td>
-          <td class="side-cell">
-            <span :class="selectedHand">{{ selectedHand === 'left' ? 'L' : 'R' }}</span>
-          </td>
-          <td class="field">{{ item.field }}</td>
-          <td class="value" :style="{ color: item.value > 0.5 ? '#fc8181' : '#63b3ed' }">
-            {{ item.value.toFixed(4) }}
-          </td>
-        </tr>
-        <tr v-if="tableData.length === 0 && !loading">
-          <td colspan="4" class="no-data">No Data Found in InfluxDB</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="table-container">
+    <table>
+      <thead>
+      <tr>
+        <th>Time</th>
+        <th>Category</th>
+        <th>Data Summary (Structured)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="(item, index) in tableData" :key="index">
+        <td class="time">{{ new Date(item.time).toLocaleTimeString() }}</td>
+        <td>
+          <el-tag size="small">{{ selectedCategory }}</el-tag>
+        </td>
+        <td class="data-detail">{{ formatDataSummary(item) }}</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 

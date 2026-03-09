@@ -14,7 +14,31 @@ class BackendBridgeNode(Node):
     def __init__(self):
         super().__init__("backend_bridge_node")
 
-        self.global_state = {"right": {"joints": {}, "touch": [], "motor": []}, "timestamp": 0}
+        # 统一初始化结构，确保所有维度都有默认值
+        self.global_state = {
+            "right": {
+                "joints": {},  # 12个语义关节位置 (Deg)
+                "velocities": {},  # 12个语义关节速度 (Deg/s)
+                "touch": {  # 7个触觉维度
+                    "normal_force": [],
+                    "normal_force_delta": [],
+                    "tangential_force": [],
+                    "tangential_force_delta": [],
+                    "direction": [],
+                    "proximity": [],
+                    "temperature": [],
+                },
+                "motor": {  # 6个电机维度
+                    "angle": [],
+                    "encoder_position": [],
+                    "current": [],
+                    "velocity": [],
+                    "error_code": [],
+                    "impedance": [],
+                },
+            },
+            "timestamp": 0,
+        }
 
         self.semantic_to_ros = {
             "th_dip": ["r_f_joint1_3", "r_f_joint1_4"],
@@ -36,19 +60,14 @@ class BackendBridgeNode(Node):
             for ros_name in ros_list:
                 self.ros_to_semantic[ros_name] = semantic
 
-        # 4. 初始化 ROS 发布者和订阅者 (固定为 right_hand)
         self.publisher = self.create_publisher(JointState, "/right_hand/joint_commands", 10)
-        self.get_logger().info("Publisher created: /right_hand/joint_commands")
-
         self.create_subscription(JointState, "/right_hand/joint_states", self.callback_joint, 10)
         self.create_subscription(Float64MultiArray, "/right_hand/touch_sensors", self.callback_touch, 10)
         self.create_subscription(Float64MultiArray, "/right_hand/motor_feedback", self.callback_motor, 10)
 
     def publish_command(self, hand: str, joint_map: dict):
-        """发送指令：前端发来 th_dip，这里翻译成 r_f_joint1_3 和 1_4 发给 ROS"""
         msg = JointState()
         msg.header.stamp = self.get_clock().now().to_msg()
-
         hardware_names = []
         hardware_positions = []
 
@@ -62,7 +81,6 @@ class BackendBridgeNode(Node):
         msg.position = hardware_positions
         self.publisher.publish(msg)
 
-        # InfluxDB: 按前端发来的纯粹名字存入数据库
         try:
             point = Point("dexhand_commands").tag("hand", "right").time(time.time_ns())
             for name, pos in joint_map.items():
@@ -72,43 +90,89 @@ class BackendBridgeNode(Node):
             pass
 
     def callback_joint(self, msg: JointState):
-        """接收反馈：ROS 发来 r_f_joint1_3，这里翻译回 th_dip 还给前端"""
-        joint_data = {}
-        for name, pos_rad in zip(msg.name, msg.position):
-            if name in self.ros_to_semantic:
-                semantic_name = self.ros_to_semantic[name]
-                pos_deg = float(pos_rad) * 180.0 / math.pi
-                joint_data[semantic_name] = pos_deg
+        """合成语义关节的 position 和 velocity"""
 
-        self.global_state["right"]["joints"] = joint_data
+        def process_metric(names, values, convert_to_deg=False):
+            if not values or len(values) == 0:
+                return {}
+            temp_sums, temp_counts = {}, {}
+            for name, val in zip(names, values):
+                if name in self.ros_to_semantic:
+                    semantic_name = self.ros_to_semantic[name]
+                    processed_val = float(val) * 180.0 / math.pi if convert_to_deg else float(val)
+                    temp_sums[semantic_name] = temp_sums.get(semantic_name, 0.0) + processed_val
+                    temp_counts[semantic_name] = temp_counts.get(semantic_name, 0) + 1
+            return {n: temp_sums[n] / temp_counts[n] for n in temp_sums}
+
+        # 更新语义关节位置和速度
+        self.global_state["right"]["joints"] = process_metric(msg.name, msg.position, convert_to_deg=True)
+        self.global_state["right"]["velocities"] = process_metric(msg.name, msg.velocity, convert_to_deg=True)
         self.global_state["timestamp"] = time.time()
 
-        # InfluxDB: 按翻译后的纯粹名字存入数据库
+        # InfluxDB 写入
+        now_ns = time.time_ns()
         try:
-            point = Point("dexhand_joints").tag("hand", "right").time(time.time_ns())
-            for name, pos in joint_data.items():
-                point.field(name, float(pos))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=point)
+            for metric, data in [("dexhand_joints", self.global_state["right"]["joints"]), ("dexhand_velocities", self.global_state["right"]["velocities"])]:
+                if data:
+                    p = Point(metric).tag("hand", "right").time(now_ns)
+                    for name, val in data.items():
+                        p.field(name, val)
+                    write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
         except Exception:
             pass
 
     def callback_touch(self, msg: Float64MultiArray):
-        self.global_state["right"]["touch"] = msg.data.tolist()
+        data = msg.data.tolist()
+        if len(data) < 40:
+            return
+
+        touch_dict = {"normal_force": [], "normal_force_delta": [], "tangential_force": [], "tangential_force_delta": [], "direction": [], "proximity": [], "temperature": []}
+        for i in range(5):
+            base = i * 8
+            touch_dict["normal_force"].append(data[base + 1])
+            touch_dict["normal_force_delta"].append(data[base + 2])
+            touch_dict["tangential_force"].append(data[base + 3])
+            touch_dict["tangential_force_delta"].append(data[base + 4])
+            touch_dict["direction"].append(data[base + 5])
+            touch_dict["proximity"].append(data[base + 6])
+            touch_dict["temperature"].append(data[base + 7])
+
+        self.global_state["right"]["touch"] = touch_dict
+
         try:
-            point = Point("dexhand_touch").tag("hand", "right").time(time.time_ns())
-            for i, val in enumerate(msg.data.tolist()):
-                point.field(f"sensor_{i}", float(val))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=point)
+            p = Point("dexhand_touch").tag("hand", "right").time(time.time_ns())
+            for key, values in touch_dict.items():
+                for i, val in enumerate(values):
+                    # 扁平化存储：例如 normal_force_0, normal_force_1 ...
+                    p.field(f"{key}_{i}", float(val))
+            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
         except Exception:
             pass
 
     def callback_motor(self, msg: Float64MultiArray):
-        self.global_state["right"]["motor"] = msg.data.tolist()
+        data = msg.data.tolist()
+        if len(data) < 84:
+            return
+
+        motor_dict = {"angle": [], "encoder_position": [], "current": [], "velocity": [], "error_code": [], "impedance": []}
+        for i in range(12):
+            base = i * 7
+            motor_dict["angle"].append(data[base + 1])
+            motor_dict["encoder_position"].append(data[base + 2])
+            curr_val = abs(data[base + 3])  # 电流取绝对值
+            motor_dict["current"].append(curr_val)
+            motor_dict["velocity"].append(data[base + 4])
+            motor_dict["error_code"].append(data[base + 5])
+            motor_dict["impedance"].append(data[base + 6])
+
+        self.global_state["right"]["motor"] = motor_dict
+
         try:
-            point = Point("dexhand_motor").tag("hand", "right").time(time.time_ns())
-            for i, val in enumerate(msg.data.tolist()):
-                point.field(f"motor_{i}", float(val))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=point)
+            p = Point("dexhand_motor").tag("hand", "right").time(time.time_ns())
+            for key, values in motor_dict.items():
+                for i, v in enumerate(values):
+                    p.field(f"{key}_{i}", float(v))
+            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
         except Exception:
             pass
 

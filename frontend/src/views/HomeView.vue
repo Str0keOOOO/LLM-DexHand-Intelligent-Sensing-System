@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import ChatPanel from '@/components/ChatPanel.vue'
-import RobotChart from '@/components/RobotChart.vue'
-import RobotManualControl from '@/components/RobotManualControl.vue'
 
-import {TrendCharts, Timer, Odometer, Connection} from "@element-plus/icons-vue"
+import {Timer, Odometer, Connection} from "@element-plus/icons-vue"
 
 import {useChat} from '@/composable/hooks/useChat'
 import {useRobot} from '@/composable/hooks/useRobot'
-
 
 const {
   modelOptions, selectedModel, isLoadingModels,
@@ -17,7 +14,6 @@ const {
   sendCommand, clearChatHistory, toggleRecording
 } = useChat()
 const {isConnected, connStatusText, connStatusColor, formattedTime,} = useRobot()
-
 
 const controlDialogVisible = ref(false)
 </script>
@@ -85,27 +81,6 @@ const controlDialogVisible = ref(false)
             </div>
           </el-col>
         </el-row>
-
-        <el-card class="chart-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <div class="header-left">
-                <div class="icon-box warning">
-                  <el-icon>
-                    <TrendCharts/>
-                  </el-icon>
-                </div>
-                <span class="title">传感器数据监控</span>
-              </div>
-              <el-tag size="small" :type="isConnected ? 'success' : 'danger'" effect="plain">
-                {{ isConnected ? '实时数据流' : '离线' }}
-              </el-tag>
-            </div>
-          </template>
-          <div class="chart-container">
-            <RobotChart/>
-          </div>
-        </el-card>
       </el-col>
     </el-row>
   </div>
@@ -114,7 +89,6 @@ const controlDialogVisible = ref(false)
 <style scoped lang="scss">
 /* --- 样式部分 --- */
 
-/* 之前的所有样式保持不变... */
 .dashboard-container {
   padding: 20px;
   background-color: #f5f7fa;
@@ -122,10 +96,9 @@ const controlDialogVisible = ref(false)
 }
 
 .main-row {
-  margin-bottom: 20px; /* 给第一行加个底部间距 */
+  margin-bottom: 20px;
 }
 
-/* 新增：分割线样式 */
 .section-divider {
   margin: 30px 0 20px 0;
 
@@ -139,45 +112,8 @@ const controlDialogVisible = ref(false)
   }
 }
 
-/* 确保历史表格高度适中，不会撑破页面 */
 .history-row {
   margin-bottom: 40px;
-}
-
-/* 复用之前的卡片和布局样式 (为了代码简洁，以下样式与你原有的保持一致) */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .icon-box {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-      color: #0284c7;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      &.warning {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #d97706;
-      }
-    }
-
-    .title {
-      font-weight: 600;
-      font-size: 16px;
-      color: #1f2937;
-    }
-  }
 }
 
 .stat-card {
@@ -240,23 +176,6 @@ const controlDialogVisible = ref(false)
   }
 }
 
-.chart-card {
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-
-  :deep(.el-card__header) {
-    padding: 15px 20px;
-    border-bottom: 1px solid #f0f2f5;
-  }
-}
-
-.chart-container {
-  min-height: 350px;
-  padding: 10px 0;
-}
-
-/* 适配 ChatPanel 的样式 */
 .left-col {
   /* 可以在这里给 ChatPanel 加上高度限制或者其他布局调整 */
 }
