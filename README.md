@@ -58,8 +58,9 @@ usbipd attach --wsl --busid 2-4
 
 ### robotic_arm
 
+记得弄在一个网段下
+
 ```powershell
-wsl -d Ubuntu-22.04
 conda activate ldiss
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
