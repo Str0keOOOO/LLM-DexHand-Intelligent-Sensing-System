@@ -42,8 +42,8 @@ python tools/hardware_test/test_dexhand.py --hands right
 如果运行错误
 
 ```
-usbipd detach --busid 2-4
-usbipd attach --wsl --busid 2-4
+usbipd detach --busid 2-3
+usbipd attach --wsl --busid 2-3
 ```
 
 ### robotic_arm
@@ -51,6 +51,7 @@ usbipd attach --wsl --busid 2-4
 记得弄在一个网段下
 
 ```powershell
+wsl -d Ubuntu-22.04
 conda activate ldiss
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```

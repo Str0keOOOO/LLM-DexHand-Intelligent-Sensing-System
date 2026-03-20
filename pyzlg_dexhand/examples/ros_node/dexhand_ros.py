@@ -136,7 +136,6 @@ class DexHandNode(ROSNode):
         }
 
         self.is_mock = config.get("mock", False)
-        print(self.is_mock)
 
         # Add feedback configuration
         self.enable_feedback = config.get("enable_feedback", False)
