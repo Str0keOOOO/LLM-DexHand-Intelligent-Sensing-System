@@ -99,8 +99,9 @@ class BackendBridgeNode(Node):
             temp_sums, temp_counts = {}, {}
             for name, val in zip(names, values):
                 if name in self.ros_to_semantic:
+                    safe_val = 0.0 if math.isnan(val) else val 
                     semantic_name = self.ros_to_semantic[name]
-                    processed_val = float(val) * 180.0 / math.pi if convert_to_deg else float(val)
+                    processed_val = float(safe_val) * 180.0 / math.pi if convert_to_deg else float(safe_val)
                     temp_sums[semantic_name] = temp_sums.get(semantic_name, 0.0) + processed_val
                     temp_counts[semantic_name] = temp_counts.get(semantic_name, 0) + 1
             return {n: temp_sums[n] / temp_counts[n] for n in temp_sums}

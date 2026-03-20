@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RobotChart from '@/components/RobotChart.vue'
+import ArmChart from '@/components/ArmChart.vue'
 import {TrendCharts} from "@element-plus/icons-vue"
 import {useRobot} from '@/composable/hooks/useRobot'
 
@@ -26,6 +27,7 @@ const {isConnected} = useRobot()
       </template>
       <div class="chart-container">
         <RobotChart/>
+        <ArmChart/>
       </div>
     </el-card>
   </div>

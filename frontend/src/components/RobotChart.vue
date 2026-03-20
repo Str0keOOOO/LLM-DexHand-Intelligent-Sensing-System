@@ -52,40 +52,39 @@ function createBarChart(dom: HTMLElement | null, title: string, xAxisData: strin
 
 function initCharts() {
   charts.posture = createBarChart(postureChartRef.value, 'Joint Positions (Deg)', MOTOR_NAMES, '#8b5cf6', 0, 90);
-  charts.velocity = createBarChart(velocityChartRef.value, 'Joint Velocities (Deg/s)', MOTOR_NAMES, '#10b981', -5, 5);
+  // charts.velocity = createBarChart(velocityChartRef.value, 'Joint Velocities (Deg/s)', MOTOR_NAMES, '#10b981', -5, 5);
   charts.normF = createBarChart(normForceRef.value, 'Normal Force (N)', FINGER_NAMES, '#3b82f6', 0, 20);
-  charts.normD = createBarChart(normDeltaRef.value, 'Normal Force Delta', FINGER_NAMES, '#60a5fa', 0, 30000000);
+  // charts.normD = createBarChart(normDeltaRef.value, 'Normal Force Delta', FINGER_NAMES, '#60a5fa', 0, 30000000);
   charts.tangF = createBarChart(tangForceRef.value, 'Tangential Force (N)', FINGER_NAMES, '#0ea5e9', 0, 20);
-  charts.tangD = createBarChart(tangDeltaRef.value, 'Tangential Force Delta', FINGER_NAMES, '#38bdf8', 0, 30000000);
+  // charts.tangD = createBarChart(tangDeltaRef.value, 'Tangential Force Delta', FINGER_NAMES, '#38bdf8', 0, 30000000);
   charts.dir = createBarChart(dirRef.value, 'Direction (0-359°)', FINGER_NAMES, '#8b5cf6', 0, 360);
   charts.prox = createBarChart(proxRef.value, 'Proximity', FINGER_NAMES, '#f97316', 0, 4060);
   charts.temp = createBarChart(tempRef.value, 'Temperature (°C)', FINGER_NAMES, '#ef4444', 0, 40);
-  charts.mAngle = createBarChart(mAngleRef.value, 'Motor Angle (Deg)', MOTOR_NAMES, '#6366f1',);
-  charts.mVel = createBarChart(mVelRef.value, 'Motor Velocity (rpm)', MOTOR_NAMES, '#14b8a6');
-  charts.mCur = createBarChart(mCurRef.value, 'Motor Current (mA)', MOTOR_NAMES, '#f59e0b');
-  charts.mEnc = createBarChart(mEncRef.value, 'Encoder Position', MOTOR_NAMES, '#3b82f6');
-  charts.mErr = createBarChart(mErrRef.value, 'Error Code (0=Normal)', MOTOR_NAMES, '#ef4444');
-  charts.mImp = createBarChart(mImpRef.value, 'Impedance', MOTOR_NAMES, '#a855f7');
+  // charts.mAngle = createBarChart(mAngleRef.value, 'Motor Angle (Deg)', MOTOR_NAMES, '#6366f1',);
+  // charts.mVel = createBarChart(mVelRef.value, 'Motor Velocity (rpm)', MOTOR_NAMES, '#14b8a6');
+  // charts.mCur = createBarChart(mCurRef.value, 'Motor Current (mA)', MOTOR_NAMES, '#f59e0b');
+  // charts.mEnc = createBarChart(mEncRef.value, 'Encoder Position', MOTOR_NAMES, '#3b82f6');
+  // charts.mErr = createBarChart(mErrRef.value, 'Error Code (0=Normal)', MOTOR_NAMES, '#ef4444');
+  // charts.mImp = createBarChart(mImpRef.value, 'Impedance', MOTOR_NAMES, '#a855f7');
 }
-
 watch(() => robotState.value, (newVal) => {
   if (!newVal || !newVal.right.motor || !newVal.right.touch) return;
   const r = newVal.right;
   const m = r.motor;
   const t = r.touch;
-
+  console.log(robotState)
   charts.posture?.setOption({series: [{data: getOrderedData(r.joint.position)}]});
-  charts.velocity?.setOption({series: [{data: getOrderedData(r.joint.velocity)}]});
-  charts.mAngle?.setOption({series: [{data: m.angle || []}]});
-  charts.mVel?.setOption({series: [{data: m.velocity || []}]});
-  charts.mCur?.setOption({series: [{data: m.current || []}]});
-  charts.mEnc?.setOption({series: [{data: m.encoder_position || []}]});
-  charts.mErr?.setOption({series: [{data: m.error_code || []}]});
-  charts.mImp?.setOption({series: [{data: m.impedance || []}]});
+  // charts.velocity?.setOption({series: [{data: getOrderedData(r.joint.velocity)}]});
+  // charts.mAngle?.setOption({series: [{data: m.angle || []}]});
+  // charts.mVel?.setOption({series: [{data: m.velocity || []}]});
+  // charts.mCur?.setOption({series: [{data: m.current || []}]});
+  // charts.mEnc?.setOption({series: [{data: m.encoder_position || []}]});
+  // charts.mErr?.setOption({series: [{data: m.error_code || []}]});
+  // charts.mImp?.setOption({series: [{data: m.impedance || []}]});
   charts.normF?.setOption({series: [{data: t.normal_force || []}]});
-  charts.normD?.setOption({series: [{data: t.normal_force_delta || []}]});
+  // charts.normD?.setOption({series: [{data: t.normal_force_delta || []}]});
   charts.tangF?.setOption({series: [{data: t.tangential_force || []}]});
-  charts.tangD?.setOption({series: [{data: t.tangential_force_delta || []}]});
+  // charts.tangD?.setOption({series: [{data: t.tangential_force_delta || []}]});
   charts.dir?.setOption({series: [{data: t.direction || []}]});
   charts.prox?.setOption({series: [{data: t.proximity || []}]});
   charts.temp?.setOption({series: [{data: t.temperature || []}]});
@@ -115,9 +114,9 @@ onUnmounted(() => {
       <div class="chart-card">
         <div ref="postureChartRef" class="chart-content"></div>
       </div>
-      <div class="chart-card">
-        <div ref="velocityChartRef" class="chart-content"></div>
-      </div>
+      <!--      <div class="chart-card">-->
+      <!--        <div ref="velocityChartRef" class="chart-content"></div>-->
+      <!--      </div>-->
     </div>
 
     <div class="section-title" style="margin-top: 10px;">
@@ -127,17 +126,17 @@ onUnmounted(() => {
       <div class="chart-card">
         <div ref="normForceRef" class="chart-content"></div>
       </div>
-      <div class="chart-card">
-        <div ref="normDeltaRef" class="chart-content"></div>
-      </div>
+      <!--      <div class="chart-card">-->
+      <!--        <div ref="normDeltaRef" class="chart-content"></div>-->
+      <!--      </div>-->
       <div class="chart-card">
         <div ref="tangForceRef" class="chart-content"></div>
       </div>
     </div>
     <div class="chart-row">
-      <div class="chart-card">
-        <div ref="tangDeltaRef" class="chart-content"></div>
-      </div>
+      <!--      <div class="chart-card">-->
+      <!--        <div ref="tangDeltaRef" class="chart-content"></div>-->
+      <!--      </div>-->
       <div class="chart-card">
         <div ref="dirRef" class="chart-content"></div>
       </div>
@@ -151,31 +150,31 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="section-title" style="margin-top: 10px;">
-      <span class="indicator motor-indicator"></span> 电机底层反馈 (Motor Feedback)
-    </div>
-    <div class="chart-row">
-      <div class="chart-card">
-        <div ref="mAngleRef" class="chart-content"></div>
-      </div>
-      <div class="chart-card">
-        <div ref="mVelRef" class="chart-content"></div>
-      </div>
-      <div class="chart-card">
-        <div ref="mCurRef" class="chart-content"></div>
-      </div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-card">
-        <div ref="mEncRef" class="chart-content"></div>
-      </div>
-      <div class="chart-card">
-        <div ref="mErrRef" class="chart-content"></div>
-      </div>
-      <div class="chart-card">
-        <div ref="mImpRef" class="chart-content"></div>
-      </div>
-    </div>
+    <!--    <div class="section-title" style="margin-top: 10px;">-->
+    <!--      <span class="indicator motor-indicator"></span> 电机底层反馈 (Motor Feedback)-->
+    <!--    </div>-->
+    <!--    <div class="chart-row">-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mAngleRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mVelRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mCurRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--    </div>-->
+    <!--    <div class="chart-row">-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mEncRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mErrRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--      <div class="chart-card">-->
+    <!--        <div ref="mImpRef" class="chart-content"></div>-->
+    <!--      </div>-->
+    <!--    </div>-->
   </div>
 </template>
 

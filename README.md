@@ -21,18 +21,8 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### ROS（是右手）
 
-虚拟
-
 ```powershell
-wsl -d Ubuntu-22.04
-conda activate ldiss
-python examples/ros_node/virtual_dexhand_ros.py
-```
-非虚拟
-
-修改mock:True
-
-```powershell
+usbipd list
 usbipd bind --busid 2-3
 usbipd attach --wsl --busid 2-3
 ```
@@ -62,7 +52,7 @@ usbipd attach --wsl --busid 2-4
 
 ```powershell
 conda activate ldiss
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8001
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 ### 数据库

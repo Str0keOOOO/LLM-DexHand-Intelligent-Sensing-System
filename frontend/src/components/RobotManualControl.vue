@@ -59,10 +59,10 @@ const jointLimits: Record<string, { min: number; max: number }> = {
 }
 
 async function handleSendControl() {
-  if (!isConnected.value) { //
-    ElMessage.error('无法发送指令：机器人通讯未连接')
-    return
-  }
+  // if (!isConnected.value) { //
+  //   ElMessage.error('无法发送指令：机器人通讯未连接')
+  //   return
+  // }
 
   controlLoading.value = true
   try {

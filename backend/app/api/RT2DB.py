@@ -15,6 +15,7 @@ def get_chat_history(limit: int = 20, skip: int = 0, db: Session = Depends(get_d
     return {"data": [{"id": log.id, "role": log.role, "content": log.content, "model": log.model, "created_at": log.created_at} for log in logs]}
 
 # TODO 这个数据库很丑，需要重构一下
+# TODO 注意让数据库只保存30天数据
 @router.get("/sensor_history")
 async def get_sensor_history(
     measurement: str = Query("dexhand_joints", description="数据类型: dexhand_joints, dexhand_touch, dexhand_motor"),
