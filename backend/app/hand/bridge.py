@@ -15,28 +15,26 @@ class BackendBridgeNode(Node):
         super().__init__("backend_bridge_node")
 
         self.global_state = {
-            "right": {
-                "joint": {
-                    "position": {},
-                    "velocity": {},
-                },
-                "touch": {
-                    "normal_force": [],
-                    "normal_force_delta": [],
-                    "tangential_force": [],
-                    "tangential_force_delta": [],
-                    "direction": [],
-                    "proximity": [],
-                    "temperature": [],
-                },
-                "motor": {
-                    "angle": [],
-                    "encoder_position": [],
-                    "current": [],
-                    "velocity": [],
-                    "error_code": [],
-                    "impedance": [],
-                },
+            "joint": {
+                "position": {},
+                "velocity": {},
+            },
+            "touch": {
+                "normal_force": [],
+                "normal_force_delta": [],
+                "tangential_force": [],
+                "tangential_force_delta": [],
+                "direction": [],
+                "proximity": [],
+                "temperature": [],
+            },
+            "motor": {
+                "angle": [],
+                "encoder_position": [],
+                "current": [],
+                "velocity": [],
+                "error_code": [],
+                "impedance": [],
             },
             "timestamp": 0,
         }
@@ -66,7 +64,7 @@ class BackendBridgeNode(Node):
         self.create_subscription(Float64MultiArray, "/right_hand/touch_sensors", self.callback_touch, 10)
         self.create_subscription(Float64MultiArray, "/right_hand/motor_feedback", self.callback_motor, 10)
 
-    def publish_command(self, hand: str, joint_map: dict):
+    def publish_command(self, joint_map: dict):
         msg = JointState()
         msg.header.stamp = self.get_clock().now().to_msg()
         hardware_names = []
@@ -82,14 +80,6 @@ class BackendBridgeNode(Node):
         msg.position = hardware_positions
         self.publisher.publish(msg)
 
-        try:
-            point = Point("dexhand_commands").tag("hand", "right").time(time.time_ns())
-            for name, pos in joint_map.items():
-                point.field(name, float(pos))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=point)
-        except Exception:
-            pass
-
     def callback_joint(self, msg: JointState):
         """合成语义关节的 position 和 velocity"""
 
@@ -99,7 +89,7 @@ class BackendBridgeNode(Node):
             temp_sums, temp_counts = {}, {}
             for name, val in zip(names, values):
                 if name in self.ros_to_semantic:
-                    safe_val = 0.0 if math.isnan(val) else val 
+                    safe_val = 0.0 if math.isnan(val) else val
                     semantic_name = self.ros_to_semantic[name]
                     processed_val = float(safe_val) * 180.0 / math.pi if convert_to_deg else float(safe_val)
                     temp_sums[semantic_name] = temp_sums.get(semantic_name, 0.0) + processed_val
@@ -107,21 +97,9 @@ class BackendBridgeNode(Node):
             return {n: temp_sums[n] / temp_counts[n] for n in temp_sums}
 
         # 更新语义关节位置和速度
-        self.global_state["right"]["joint"]["position"] = process_metric(msg.name, msg.position, convert_to_deg=True)
-        self.global_state["right"]["joint"]["velocity"] = process_metric(msg.name, msg.velocity, convert_to_deg=True)
+        self.global_state["joint"]["position"] = process_metric(msg.name, msg.position, convert_to_deg=True)
+        self.global_state["joint"]["velocity"] = process_metric(msg.name, msg.velocity, convert_to_deg=True)
         self.global_state["timestamp"] = time.time()
-
-        # InfluxDB 写入
-        now_ns = time.time_ns()
-        try:
-            for metric, data in [("dexhand_position", self.global_state["right"]["joint"]["position"]), ("dexhand_velocity", self.global_state["right"]["joint"]["velocity"])]:
-                if data:
-                    p = Point(metric).tag("hand", "right").time(now_ns)
-                    for name, val in data.items():
-                        p.field(name, val)
-                    write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
-        except Exception:
-            pass
 
     def callback_touch(self, msg: Float64MultiArray):
         data = msg.data.tolist()
@@ -139,17 +117,7 @@ class BackendBridgeNode(Node):
             touch_dict["proximity"].append(data[base + 6])
             touch_dict["temperature"].append(data[base + 7])
 
-        self.global_state["right"]["touch"] = touch_dict
-
-        try:
-            p = Point("dexhand_touch").tag("hand", "right").time(time.time_ns())
-            for key, values in touch_dict.items():
-                for i, val in enumerate(values):
-                    # 扁平化存储：例如 normal_force_0, normal_force_1 ...
-                    p.field(f"{key}_{i}", float(val))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
-        except Exception:
-            pass
+        self.global_state["touch"] = touch_dict
 
     def callback_motor(self, msg: Float64MultiArray):
         data = msg.data.tolist()
@@ -167,23 +135,36 @@ class BackendBridgeNode(Node):
             motor_dict["error_code"].append(data[base + 5])
             motor_dict["impedance"].append(data[base + 6])
 
-        self.global_state["right"]["motor"] = motor_dict
+        self.global_state["motor"] = motor_dict
+
+    def call_reset_service(self) -> dict:
+        resp = None
+        ok = False
+        message = ""
 
         try:
-            p = Point("dexhand_motor").tag("hand", "right").time(time.time_ns())
-            for key, values in motor_dict.items():
-                for i, v in enumerate(values):
-                    p.field(f"{key}_{i}", float(v))
-            write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=p)
-        except Exception:
-            pass
+            client = self.create_client(Trigger, "/reset_hands")
+            if not client.wait_for_service(timeout_sec=1.0):
+                message = "Service /reset_hands not available"
+            else:
+                req = Trigger.Request()
+                future = client.call_async(req)
 
-    def call_reset_service(self):
-        client = self.create_client(Trigger, "/reset_hands")
-        if not client.wait_for_service(timeout_sec=1.0):
-            return False
-        client.call_async(Trigger.Request())
-        return True
+                rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+
+                if not future.done():
+                    message = "Service call timeout"
+                else:
+                    resp = future.result()
+                    if resp is None:
+                        message = "Service call failed with no response"
+                    else:
+                        ok = bool(resp.success)
+                        message = str(resp.message)
+        except Exception as e:
+            message = str(e)
+
+        return {"success": ok, "message": message}
 
 
 class ROSBridgeManager:
@@ -212,6 +193,6 @@ class ROSBridgeManager:
         node = self._node
         return node.global_state if node else {}
 
-    def send_command(self, hand: str, command: dict):
+    def send_command(self, command: dict):
         if self._node:
-            self._node.publish_command(hand, command)
+            self._node.publish_command(command)

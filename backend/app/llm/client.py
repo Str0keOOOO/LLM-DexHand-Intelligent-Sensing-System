@@ -1,5 +1,6 @@
 import os
 import asyncio
+import re
 import json
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatOllama
@@ -79,3 +80,14 @@ async def validate_model(model_name: str) -> tuple[bool, str]:
         if "Connection refused" in error_msg:
             return False, "Connection Refused (Is Ollama running?)"
         return False, f"Error: {error_msg[:100]}..."
+
+
+def extract_json(text: str):
+    """尝试从 LLM 回复中提取 JSON 块"""
+    try:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        return None
+    except (TypeError, json.JSONDecodeError, re.error):
+        return None

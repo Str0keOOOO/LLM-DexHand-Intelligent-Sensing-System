@@ -16,7 +16,7 @@ org = os.getenv("INFLUX_ORG", "dexhand_org")
 INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "dexhand_bucket")
 
 client = InfluxDBClient(url=url, token=token, org=org)
-write_api = client.write_api(write_options=WriteOptions(batch_size=500))
+write_api = client.write_api(write_options=WriteOptions(batch_size=500, flush_interval=1000))
 query_api = client.query_api()
 
 
