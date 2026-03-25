@@ -1,28 +1,20 @@
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
-import {getChatHistory} from '@/composable/api/Chat2DB'
+import {onMounted} from 'vue'
+import {useDB} from '@/composable/hooks/useDB'
 import type {ChatLogItem} from "@/composable/types/llm";
 
-const tableData = ref<ChatLogItem[]>([])
-const loading = ref(false)
+const {chatHistoryData, isLoadingChat, fetchChatHistory} = useDB()
 
 async function fetchData() {
-  loading.value = true
-  try {
-    const res = await getChatHistory(100)
-    tableData.value = res.data
-  } catch (error) {
-    console.error('Failed to fetch chat history', error)
-  } finally {
-    loading.value = false
-  }
+  await fetchChatHistory(100)
 }
 
 function downloadCSV() {
-  if (tableData.value.length === 0) return
+  const data = chatHistoryData.value?.data || []
+  if (data.length === 0) return
 
   const headers = ['ID', 'Time', 'Role', 'Model', 'Content']
-  const rows = tableData.value.map(row => [
+  const rows = data.map((row: ChatLogItem) => [
     row.id,
     row.created_at,
     row.role,
@@ -55,8 +47,8 @@ onMounted(() => {
     <div class="header">
       <h3>💬 Chat History (MySQL)</h3>
       <div class="actions">
-        <button @click="fetchData" :disabled="loading">Refresh</button>
-        <button @click="downloadCSV" class="download-btn" :disabled="tableData.length === 0">⬇ Download CSV</button>
+        <button @click="fetchData" :disabled="isLoadingChat">Refresh</button>
+        <button @click="downloadCSV" class="download-btn" :disabled="!chatHistoryData?.data || chatHistoryData.data.length === 0">⬇ Download CSV</button>
       </div>
     </div>
 
@@ -71,7 +63,7 @@ onMounted(() => {
         </tr>
         </thead>
         <tbody>
-        <tr v-for="item in tableData" :key="item.id">
+        <tr v-for="item in chatHistoryData?.data || []" :key="item.id">
           <td class="time">{{ new Date(item.created_at).toLocaleString() }}</td>
           <td>
             <span :class="['tag', item.role]">{{ item.role }}</span>
@@ -79,7 +71,7 @@ onMounted(() => {
           <td>{{ item.model }}</td>
           <td class="content">{{ item.content }}</td>
         </tr>
-        <tr v-if="tableData.length === 0 && !loading">
+        <tr v-if="(!chatHistoryData?.data || chatHistoryData.data.length === 0) && !isLoadingChat">
           <td colspan="4" style="text-align: center; color: #888;">No Data</td>
         </tr>
         </tbody>

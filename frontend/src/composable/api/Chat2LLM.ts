@@ -1,25 +1,23 @@
 import request from '@/composable/utils/request'
 import type {
-    ChatRequest,
-    ChatResponse,
-    CheckModelRequest,
-    CheckModelResponse,
-    ModelListResponse
+    SuccessResponse, ModelListResponse, ModelChatResponse
 } from '@/composable/types/llm'
 
-export function getModels() {
-    return request.get<ModelListResponse>('/chat/models')
+export function checkModelConnect(model: string) {
+    const data = {model: model}
+    return request.post<SuccessResponse>('/llm/check', data)
 }
 
-export function checkModelConnect(modelName: string) {
-    const data: CheckModelRequest = {model: modelName}
-    return request.post<CheckModelResponse>('/chat/check', data)
+
+export function listModels() {
+    return request.get<ModelListResponse>('/llm/models')
 }
+
 
 export function sendChatMsg(msg: string, model: string) {
-    const data: ChatRequest = {
+    const data = {
         message: msg,
         model: model
     }
-    return request.post<ChatResponse>('/chat/send', data)
+    return request.post<ModelChatResponse>('/llm/send', data)
 }

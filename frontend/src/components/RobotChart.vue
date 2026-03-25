@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import {ref, onMounted, onUnmounted, watch} from 'vue';
 import * as echarts from 'echarts';
-import {useRobot} from '@/composable/hooks/useRobot';
+import {useHand} from '@/composable/hooks/useHand.ts';
 
-const {robotState} = useRobot();
+// 使用 hook 暴露的 handState
+const {handState} = useHand();
 
 const postureChartRef = ref<HTMLElement | null>(null);
 const velocityChartRef = ref<HTMLElement | null>(null);
@@ -67,12 +68,12 @@ function initCharts() {
   // charts.mErr = createBarChart(mErrRef.value, 'Error Code (0=Normal)', MOTOR_NAMES, '#ef4444');
   // charts.mImp = createBarChart(mImpRef.value, 'Impedance', MOTOR_NAMES, '#a855f7');
 }
-watch(() => robotState.value, (newVal) => {
-  if (!newVal || !newVal.right.motor || !newVal.right.touch) return;
+watch(() => handState.value, (newVal) => {
+  if (!newVal || !newVal.right || !newVal.right.motor || !newVal.right.touch) return;
   const r = newVal.right;
   const m = r.motor;
   const t = r.touch;
-  console.log(robotState)
+  console.log(handState)
   charts.posture?.setOption({series: [{data: getOrderedData(r.joint.position)}]});
   // charts.velocity?.setOption({series: [{data: getOrderedData(r.joint.velocity)}]});
   // charts.mAngle?.setOption({series: [{data: m.angle || []}]});
@@ -114,9 +115,6 @@ onUnmounted(() => {
       <div class="chart-card">
         <div ref="postureChartRef" class="chart-content"></div>
       </div>
-      <!--      <div class="chart-card">-->
-      <!--        <div ref="velocityChartRef" class="chart-content"></div>-->
-      <!--      </div>-->
     </div>
 
     <div class="section-title" style="margin-top: 10px;">
@@ -126,17 +124,11 @@ onUnmounted(() => {
       <div class="chart-card">
         <div ref="normForceRef" class="chart-content"></div>
       </div>
-      <!--      <div class="chart-card">-->
-      <!--        <div ref="normDeltaRef" class="chart-content"></div>-->
-      <!--      </div>-->
       <div class="chart-card">
         <div ref="tangForceRef" class="chart-content"></div>
       </div>
     </div>
     <div class="chart-row">
-      <!--      <div class="chart-card">-->
-      <!--        <div ref="tangDeltaRef" class="chart-content"></div>-->
-      <!--      </div>-->
       <div class="chart-card">
         <div ref="dirRef" class="chart-content"></div>
       </div>
@@ -150,31 +142,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!--    <div class="section-title" style="margin-top: 10px;">-->
-    <!--      <span class="indicator motor-indicator"></span> 电机底层反馈 (Motor Feedback)-->
-    <!--    </div>-->
-    <!--    <div class="chart-row">-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mAngleRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mVelRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mCurRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--    </div>-->
-    <!--    <div class="chart-row">-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mEncRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mErrRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--      <div class="chart-card">-->
-    <!--        <div ref="mImpRef" class="chart-content"></div>-->
-    <!--      </div>-->
-    <!--    </div>-->
   </div>
 </template>
 

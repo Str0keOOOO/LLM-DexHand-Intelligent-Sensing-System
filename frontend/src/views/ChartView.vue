@@ -2,9 +2,9 @@
 import RobotChart from '@/components/RobotChart.vue'
 import ArmChart from '@/components/ArmChart.vue'
 import {TrendCharts} from "@element-plus/icons-vue"
-import {useRobot} from '@/composable/hooks/useRobot'
+import {useHand} from '@/composable/hooks/useHand.ts'
 
-const {isConnected} = useRobot()
+const {isConnected} = useHand()
 </script>
 
 <template>

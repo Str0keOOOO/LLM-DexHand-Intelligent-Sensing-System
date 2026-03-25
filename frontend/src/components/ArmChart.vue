@@ -1,17 +1,24 @@
-```vue
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useArm } from '@/composable/hooks/useArm'
 
-const { jointPositionsDeg, isConnected, connect, startPolling, stopPolling } = useArm()
+const { ArmState, isConnected, connectWebSocket } = useArm()
 
 // 只展示前 6 个关节（不足 6 个则补 0）
 const JOINTS = 6
 
 const joints6 = computed<number[]>(() => {
-  const src = Array.isArray(jointPositionsDeg.value) ? jointPositionsDeg.value : []
-  const arr = src.slice(0, JOINTS)
-  while (arr.length < JOINTS) arr.push(0)
+  if (!ArmState.value) return Array(JOINTS).fill(0)
+  // 适配 hooks 中提取到的状态
+  const state = ArmState.value as any
+  const arr = [
+    state.x || 0,
+    state.y || 0,
+    state.z || 0,
+    state.rx || 0,
+    state.ry || 0,
+    state.rz || 0
+  ]
   return arr
 })
 
@@ -66,83 +73,68 @@ function colorFor(i: number) {
   return colors[i % colors.length]
 }
 
-onMounted(async () => {
+onMounted(() => {
   if (!isConnected.value) {
-    try {
-      await connect()
-    } catch {
-      // 忽略连接失败
-    }
+    connectWebSocket()
   }
-  startPolling(300)
-})
-
-onUnmounted(() => {
-  stopPolling()
 })
 </script>
 
 <template>
   <div class="wrap">
     <div class="header">
-      <div class="title">六关节柱形图（deg）</div>
+      <div class="title">六轴姿态图 (x, y, z, rx, ry, rz)</div>
       <div class="meta">
         <span>实时数据（取最新一帧）</span>
       </div>
     </div>
 
     <svg :width="W" :height="H" class="chart" viewBox="0 0 900 320">
-      <!-- 绘图区域边框 -->
       <rect :x="padding" :y="padding" :width="W - padding * 2" :height="H - padding * 2" fill="none" stroke="#e5e7eb" />
 
-      <!-- 0 轴线 -->
       <line :x1="padding" :x2="W - padding" :y1="zeroY" :y2="zeroY" stroke="#9ca3af" stroke-dasharray="6 6" />
       <text :x="padding + 4" :y="zeroY - 6" font-size="12" fill="#6b7280">0</text>
 
-      <!-- 柱子 -->
       <template v-for="(v, i) in joints6" :key="i">
         <g>
           <rect
-            :x="barGeom(i, v).x"
-            :y="barGeom(i, v).y"
-            :width="barGeom(i, v).w"
-            :height="clamp(barGeom(i, v).h, 0, H)"
-            :fill="colorFor(i)"
-            opacity="0.9"
-            rx="6"
+              :x="barGeom(i, v).x"
+              :y="barGeom(i, v).y"
+              :width="barGeom(i, v).w"
+              :height="clamp(barGeom(i, v).h, 0, H)"
+              :fill="colorFor(i)"
+              opacity="0.9"
+              rx="6"
           />
 
-          <!-- 数值标注 -->
           <text
-            :x="barGeom(i, v).x + barGeom(i, v).w / 2"
-            :y="barGeom(i, v).y - 6"
-            text-anchor="middle"
-            font-size="12"
-            fill="#374151"
+              :x="barGeom(i, v).x + barGeom(i, v).w / 2"
+              :y="barGeom(i, v).y - 6"
+              text-anchor="middle"
+              font-size="12"
+              fill="#374151"
           >
             {{ v.toFixed(2) }}
           </text>
 
-          <!-- 关节标签 -->
           <text
-            :x="barGeom(i, v).x + barGeom(i, v).w / 2"
-            :y="axisBottom + 18"
-            text-anchor="middle"
-            font-size="12"
-            fill="#6b7280"
+              :x="barGeom(i, v).x + barGeom(i, v).w / 2"
+              :y="axisBottom + 18"
+              text-anchor="middle"
+              font-size="12"
+              fill="#6b7280"
           >
-            J{{ i + 1 }}
+            P{{ i + 1 }}
           </text>
         </g>
       </template>
 
-      <!-- Y 轴下/上界 -->
       <text :x="axisLeft" :y="padding - 8" font-size="12" fill="#6b7280">max: {{ maxY.toFixed(2) }}</text>
       <text :x="axisLeft" :y="H - 8" font-size="12" fill="#6b7280">min: {{ minY.toFixed(2) }}</text>
     </svg>
 
     <div class="footer">
-      <span>J1~J6：{{ joints6.map(v => v.toFixed(2)).join(', ') }}</span>
+      <span>P1~P6：{{ joints6.map(v => v.toFixed(2)).join(', ') }}</span>
     </div>
   </div>
 </template>

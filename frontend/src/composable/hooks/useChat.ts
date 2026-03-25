@@ -1,8 +1,8 @@
 import {onMounted, ref, watch, computed} from 'vue'
 import {storeToRefs} from 'pinia'
 import {useChatStore} from '@/composable/stores/Store2Chat'
-import {getModels, sendChatMsg, checkModelConnect} from '@/composable/api/Chat2LLM'
-import {sendControlCommand as apiSendControl} from '@/composable/api/Chat2Robot'
+import {listModels, sendChatMsg, checkModelConnect} from '@/composable/api/Chat2LLM'
+import {sendControlCommand as apiSendControl} from '@/composable/api/Chat2Hand.ts'
 import type {ModelOption, ChatMsg, ConnStatus, ControlRespPayload} from '@/composable/types/llm'
 
 const chatWelcomeMessage: ChatMsg = {
@@ -90,7 +90,7 @@ export function useChat() {
     async function initModels() {
         isLoadingModels.value = true
         try {
-            const res = await getModels()
+            const res = await listModels()
             const models: ModelOption[] = extractModels(res) // 显式声明类型
 
             if (models.length > 0) {
@@ -232,17 +232,29 @@ export function useChat() {
     })
 
     return {
+        /** 可供选择的大语言模型列表 */
         modelOptions,
+        /** 当前选中的模型名称 */
         selectedModel,
+        /** 是否正在加载模型列表数据 */
         isLoadingModels,
+        /** 大语言模型的连接检测状态（'init' | 'checking' | 'success' | 'fail'） */
         connStatus,
+        /** 大语言模型连接检测后的具体提示信息 */
         connMessage,
+        /** 对话历史记录数组 */
         chatHistory,
+        /** 用户当前的输入框指令文本（支持手动输入和语音识别产出） */
         inputCommand,
+        /** 当前是否正在发送消息并等待大语言模型响应中 */
         isSending,
+        /** 当前是否正在进行语音识别（录音中） */
         isRecording,
+        /** 发送聊天指令（将输入框文本发送给后端选定的 LLM）并尝试解析和下发附带的硬件控制命令 */
         sendCommand,
+        /** 清除界面上的对话历史记录（可选择是否保留初始欢迎语） */
         clearChatHistory,
+        /** 切换语音识别的状态：点击开启录制，再点停止录制并转写到输入框 */
         toggleRecording
     }
 }

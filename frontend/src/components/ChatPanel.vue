@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import {computed, ref, nextTick, watch, onMounted} from 'vue'
-import type {ConnStatus, ModelOption, ChatMsg} from '@/composable/types/llm'
+import {ref, nextTick, watch, onMounted} from 'vue'
 import {
   ChatLineRound,
   Cpu,
@@ -12,40 +11,18 @@ import {
   Service,
   Microphone
 } from '@element-plus/icons-vue'
-
-const props = defineProps<{
-  modelOptions: ModelOption[]
-  selectedModel: string
-  isLoadingModels: boolean
-
-  connStatus: ConnStatus
-  connMessage: string
-
-  chatHistory: ChatMsg[]
-  inputCommand: string
-
-  isSending: boolean
-  isRecording: boolean
-}>()
+import {useChat} from '@/composable/hooks/useChat'
 
 const emit = defineEmits<{
-  (e: 'update:selectedModel', v: string): void
-  (e: 'update:inputCommand', v: string): void
-  (e: 'send'): void
-  (e: 'clear', hard: boolean): void
   (e: 'open-manual'): void
-  (e: 'toggle-recording'): void
 }>()
 
-const selectedModelModel = computed({
-  get: () => props.selectedModel,
-  set: (v: string) => emit('update:selectedModel', v)
-})
-
-const inputCommandModel = computed({
-  get: () => props.inputCommand,
-  set: (v: string) => emit('update:inputCommand', v)
-})
+const {
+  modelOptions, selectedModel, isLoadingModels,
+  connStatus, connMessage, chatHistory,
+  inputCommand, isSending, isRecording,
+  sendCommand, clearChatHistory, toggleRecording
+} = useChat()
 
 const chatWindowRef = ref<HTMLElement | null>(null)
 
@@ -71,7 +48,7 @@ onMounted(() => {
 })
 
 watch(
-    () => props.chatHistory.length,
+    () => chatHistory.value.length,
     async (n, o) => {
       if (n === o) return
       await nextTick()
@@ -80,7 +57,7 @@ watch(
 )
 
 watch(
-    () => props.chatHistory[props.chatHistory.length - 1]?.content,
+    () => chatHistory.value[chatHistory.value.length - 1]?.content,
     async () => {
       await nextTick()
       if (isNearBottom.value) scrollToBottom('auto')
@@ -114,7 +91,7 @@ function parseContent(content: string) {
 
         <div class="header-right">
           <el-select
-              v-model="selectedModelModel"
+              v-model="selectedModel"
               placeholder="选择模型"
               size="small"
               class="model-select"
@@ -130,7 +107,7 @@ function parseContent(content: string) {
           </el-select>
 
           <el-tooltip content="清空对话历史" placement="top">
-            <el-button class="action-btn" size="small" circle :disabled="isSending" @click="emit('clear', true)">
+            <el-button class="action-btn" size="small" circle :disabled="isSending" @click="clearChatHistory(true)">
               <el-icon>
                 <Delete/>
               </el-icon>
@@ -181,9 +158,9 @@ function parseContent(content: string) {
 
     <div class="input-area">
       <el-input
-          v-model="inputCommandModel"
+          v-model="inputCommand"
           placeholder="请输入控制指令 (Enter发送)..."
-          @keyup.enter="emit('send')"
+          @keyup.enter="sendCommand"
           :disabled="isSending || connStatus === 'checking'"
           class="custom-input"
       >
@@ -194,7 +171,7 @@ function parseContent(content: string) {
               circle
               size="small"
               style="margin-right: 8px"
-              @click="emit('toggle-recording')"
+              @click="toggleRecording"
               :disabled="isSending"
           >
             <el-icon>
@@ -207,7 +184,7 @@ function parseContent(content: string) {
               type="primary"
               round
               size="small"
-              @click="emit('send')"
+              @click="sendCommand"
               :loading="isSending"
               :disabled="connStatus === 'fail' || isRecording"
           >

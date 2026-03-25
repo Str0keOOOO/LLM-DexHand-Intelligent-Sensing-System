@@ -4,16 +4,9 @@ import ChatPanel from '@/components/ChatPanel.vue'
 
 import {Timer, Odometer, Connection} from "@element-plus/icons-vue"
 
-import {useChat} from '@/composable/hooks/useChat'
-import {useRobot} from '@/composable/hooks/useRobot'
+import {useHand} from '@/composable/hooks/useHand.ts'
 
-const {
-  modelOptions, selectedModel, isLoadingModels,
-  connStatus, connMessage, chatHistory,
-  inputCommand, isSending, isRecording,
-  sendCommand, clearChatHistory, toggleRecording
-} = useChat()
-const {isConnected, connStatusText, connStatusColor, formattedTime,} = useRobot()
+const {isConnected, connStatusText, connStatusColor, formattedTime,} = useHand()
 
 const controlDialogVisible = ref(false)
 </script>
@@ -23,19 +16,7 @@ const controlDialogVisible = ref(false)
     <el-row :gutter="24" class="main-row">
       <el-col :span="10" class="left-col">
         <ChatPanel
-            v-model:selectedModel="selectedModel"
-            v-model:inputCommand="inputCommand"
-            :model-options="modelOptions"
-            :is-loading-models="isLoadingModels"
-            :conn-status="connStatus"
-            :conn-message="connMessage"
-            :chat-history="chatHistory"
-            :is-sending="isSending"
-            :is-recording="isRecording"
-            @send="sendCommand"
-            @clear="clearChatHistory"
             @open-manual="controlDialogVisible = true"
-            @toggle-recording="toggleRecording"
         />
       </el-col>
 

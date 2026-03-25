@@ -1,31 +1,28 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { getSensorHistory } from '@/composable/api/Chat2DB'
-import type { MeasurementType, SensorItem } from '@/composable/types/robot'
-import { ElMessage } from 'element-plus'
+import {ref, onMounted} from 'vue'
+import {useDB} from '@/composable/hooks/useDB'
+import type {MeasurementType, SensorItem} from '@/composable/types/robot'
+import {ElMessage} from 'element-plus'
+
+const {isLoadingSensor, fetchSensorHistory} = useDB()
 
 const tableData = ref<SensorItem[]>([])
-const loading = ref(false)
 const selectedHand = ref('right')
 const queryMinutes = ref(1)
 const selectedCategory = ref<MeasurementType>('dexhand_joints')
 
 async function fetchData() {
-  loading.value = true
   try {
-    const res = await getSensorHistory(
-        selectedCategory.value, // 使用选择的分类
-        queryMinutes.value,
-        selectedHand.value
+    const res = await fetchSensorHistory(
+        selectedCategory.value,
+        queryMinutes.value
     )
     if (res && res.data) {
       tableData.value = res.data // 后端已完成排序
       if (tableData.value.length === 0) ElMessage.info('该时间段内暂无数据')
     }
   } catch (error) {
-    ElMessage.error('获取历史数据失败')
-  } finally {
-    loading.value = false
+    // Error 已经在 hook 中处理，这里只需空捕获即可
   }
 }
 
@@ -78,7 +75,7 @@ onMounted(() => {
   <div class="controls">
     <div class="select-group">
       <label>Category:</label>
-      <select v-model="selectedCategory" @change="fetchData" :disabled="loading">
+      <select v-model="selectedCategory" @change="fetchData" :disabled="isLoadingSensor">
         <option value="dexhand_joints">Semantic Joints</option>
         <option value="dexhand_touch">Touch Sensors</option>
         <option value="dexhand_motor">Motor Feedback</option>

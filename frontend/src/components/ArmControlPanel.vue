@@ -2,21 +2,17 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useArm } from '@/composable/hooks/useArm'
-import type { StartJogRequest } from '@/composable/api/Chat2Arm'
 
 const {
   isConnecting,
-  isJogging,
   connStatusText,
   connStatusColor,
-  connect,
-  jog
+  connectWebSocket,
+  move
 } = useArm()
 
-/**
- * 为了通过 StartJogRequest 的类型检查：
- * axis / direction 用字面量联合类型（具体可按你的后端协议增减）。
- */
+const isJogging = ref(false)
+
 type Axis = 'x' | 'y' | 'z' | 'rx' | 'ry' | 'rz'
 type Direction = 'positive' | 'negative'
 
@@ -29,7 +25,7 @@ const form = ref({
   max_dist: 30
 })
 
-const payload = computed<StartJogRequest>(() => ({
+const payload = computed(() => ({
   ref: form.value.ref,
   axis: form.value.axis,
   direction: form.value.direction,
@@ -39,10 +35,13 @@ const payload = computed<StartJogRequest>(() => ({
 }))
 
 async function sendJog() {
+  isJogging.value = true
   try {
-    await jog(payload.value)
+    await move(payload.value as any)
   } catch (e: any) {
-    ElMessage.error(e?.message ?? 'Jog 指令下发失败')
+    // 错误在 hook 内已用 ElMessage 处理，此处仅捕获异常即可
+  } finally {
+    isJogging.value = false
   }
 }
 </script>
@@ -61,7 +60,7 @@ async function sendJog() {
     <el-row :gutter="12" class="action-row">
       <el-col :span="16">
         <el-button-group>
-          <el-button type="primary" :loading="isConnecting" @click="connect">连接机械臂</el-button>
+          <el-button type="primary" :loading="isConnecting" @click="connectWebSocket">连接机械臂</el-button>
         </el-button-group>
       </el-col>
     </el-row>
@@ -153,5 +152,9 @@ async function sendJog() {
 .label {
   font-size: 12px;
   color: #909399;
+}
+
+.jog-btn {
+  margin-top: 15px;
 }
 </style>

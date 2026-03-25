@@ -1,24 +1,15 @@
 import request from '@/composable/utils/request'
-import type {MeasurementType} from "@/composable/types/robot";
-import type {ChatLogItem} from "@/composable/types/llm";
+import type {ChatHistoryResponse, SensorHistoryResponse} from "@/composable/types/db.ts";
 
-export function getChatHistory(limit: number = 50, skip: number = 0) {
-    return request<any, { data: ChatLogItem[] }>({
-        url: '/data_base/chat_history',
-        method: 'get',
+export function getChatHistory(limit: number = 20, skip: number = 0) {
+    return request.get<ChatHistoryResponse>('/db/chat_history', {
         params: {limit, skip}
     })
 }
 
 
-export function getSensorHistory(
-    measurement: MeasurementType = 'dexhand_joints',
-    minutes: number = 1,
-    hand: string = 'right'
-) {
-    return request<any, { data: any[] }>({
-        url: '/data_base/sensor_history',
-        method: 'get',
-        params: {measurement, minutes, hand}
+export function getSensorHistory(target: string, minutes: number) {
+    return request.get<SensorHistoryResponse>('/data_base/sensor_history', {
+        params: {target, minutes}
     })
 }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {sendControlCommand} from "@/composable/api/Chat2Robot";
+import {sendControlCommand} from "@/composable/api/Chat2Hand.ts";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {reactive, ref} from "vue";
 import type {JointsState, ControlForm} from "@/composable/types/robot";
-import {useRobot} from "@/composable/hooks/useRobot.ts";
+import {useHand} from "@/composable/hooks/useHand.ts";
 
-const {handleReset, isConnected} = useRobot()
+const {reset, isConnected} = useHand()
 const controlLoading = ref(false)
 
 const controlForm = reactive<ControlForm>({
@@ -59,11 +59,6 @@ const jointLimits: Record<string, { min: number; max: number }> = {
 }
 
 async function handleSendControl() {
-  // if (!isConnected.value) { //
-  //   ElMessage.error('无法发送指令：机器人通讯未连接')
-  //   return
-  // }
-
   controlLoading.value = true
   try {
     const jointsPayload: Record<string, number> = {...controlForm.joints};
@@ -89,7 +84,7 @@ async function confirmHardwareReset() {
         '物理复位确认',
         {confirmButtonText: '确定复位', cancelButtonText: '取消', type: 'warning'}
     )
-    await handleReset()
+    await reset()
   } catch {
     // 用户取消操作
   }
