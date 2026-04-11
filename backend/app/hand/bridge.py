@@ -189,6 +189,23 @@ class ROSBridgeManager:
     def is_started(self) -> bool:
         return self._node is not None
 
+    def is_connected(self) -> bool:
+        if self._node is None:
+            return False
+
+        # 推荐方法：检查是否有其他节点正在发布状态话题
+        # 如果硬件/仿真节点挂了，这个发布者数量会是 0
+        pubs_count = self._node.count_publishers("/right_hand/joint_states")
+        if pubs_count > 0:
+            return True
+
+        # 备选方法：检查接收到的数据时间戳是否太老 (例如超过 2 秒没数据认为断开)
+        # last_time = self._node.global_state.get("timestamp", 0)
+        # if time.time() - last_time < 2.0:
+        #     return True
+
+        return False
+
     def get_latest_state(self) -> dict:
         node = self._node
         return node.global_state if node else {}

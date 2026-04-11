@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import ArmControlPanel from '@/components/ArmControlPanel.vue';
-import RobotManualControl from '@/components/RobotManualControl.vue';
+import ArmManualControl from '@/components/ArmManualControl.vue';
+import HandManualControl from '@/components/HandManualControl.vue';
 </script>
 
 <template>
   <div class="control-page-container">
     <el-row :gutter="24">
       <el-col :span="10">
-        <ArmControlPanel/>
+        <ArmManualControl/>
       </el-col>
 
       <el-col :span="14">
-        <RobotManualControl/>
+        <HandManualControl/>
       </el-col>
     </el-row>
   </div>

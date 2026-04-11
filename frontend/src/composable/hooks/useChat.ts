@@ -1,9 +1,8 @@
-import {onMounted, ref, watch, computed} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {storeToRefs} from 'pinia'
 import {useChatStore} from '@/composable/stores/Store2Chat'
-import {listModels, sendChatMsg, checkModelConnect} from '@/composable/api/Chat2LLM'
-import {sendControlCommand as apiSendControl} from '@/composable/api/Chat2Hand.ts'
-import type {ModelOption, ChatMsg, ConnStatus, ControlRespPayload} from '@/composable/types/llm'
+import {checkModelConnect, listModels, sendChatMsg} from '@/composable/api/Chat2LLM'
+import type {ChatMsg, ConnStatus, ModelOption} from '@/composable/types/llm'
 
 const chatWelcomeMessage: ChatMsg = {
     role: 'system',
@@ -12,7 +11,6 @@ const chatWelcomeMessage: ChatMsg = {
 
 export function useChat() {
     const chatStore = useChatStore()
-    // 从 store 中解构状态，保持响应式
     const {
         chatHistory,
         selectedModel: selectedModelRaw,
@@ -48,11 +46,10 @@ export function useChat() {
             isRecording.value = false
         }
         recognizer.onresult = (event: any) => {
-            const transcript = Array.from(event.results)
+            inputCommand.value = Array.from(event.results)
                 .map((result: any) => result[0])
                 .map((result: any) => result.transcript)
                 .join('')
-            inputCommand.value = transcript
         }
         return recognizer
     }
@@ -128,7 +125,7 @@ export function useChat() {
                 return true
             } else {
                 connStatus.value = 'fail'
-                connMessage.value = data?.message || '连接失败'
+                connMessage.value = '连接失败'
                 return false
             }
         } catch {
@@ -168,47 +165,12 @@ export function useChat() {
 
             const reply = String(payload?.reply ?? payload?.data?.reply ?? '')
             const modelName = String(payload?.model_name ?? payload?.model ?? '')
-            const controlCmd = payload?.control_command ?? payload?.controlCommand ?? null
 
             chatHistory.value.push({
                 role: 'system',
                 content: reply,
                 model: modelName
             })
-
-            if (controlCmd) {
-                const jointsObj = (controlCmd?.joints ?? {}) as Record<string, unknown>
-                const cmdSummary = `手部: ${controlCmd.hand === 'left' ? '左手' : '右手'}, 关节数: ${Object.keys(jointsObj).length}`
-                const cmdDetail = JSON.stringify(jointsObj, null, 2)
-
-                chatHistory.value.push({
-                    role: 'system',
-                    content: `🤖 [识别到指令] ${cmdSummary}\n\`\`\`json\n${cmdDetail}\n\`\`\``,
-                    model: 'Controller'
-                })
-
-                chatHistory.value.push({role: 'system', content: '⏳ 正在下发指令到硬件层...', model: 'System'})
-
-                try {
-                    const ctrlRes = await apiSendControl(controlCmd)
-                    const ctrlPayload = normalize(ctrlRes) as ControlRespPayload
-
-                    const sentTo = ctrlPayload?.sent_to ?? ctrlPayload?.sentTo ?? ctrlPayload?.result?.sent_to ?? 'Unknown'
-
-                    chatHistory.value.push({
-                        role: 'system',
-                        content: `✅ 指令执行成功 (Sent to ${sentTo})`,
-                        model: 'System'
-                    })
-                } catch (err: any) {
-                    const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? 'Unknown error'
-                    chatHistory.value.push({
-                        role: 'system',
-                        content: `❌ 指令执行失败: ${msg}`,
-                        model: 'System'
-                    })
-                }
-            }
         } catch (error) {
             chatHistory.value.push({role: 'system', content: '❌ 错误：请求超时或服务异常'})
             console.error(error)

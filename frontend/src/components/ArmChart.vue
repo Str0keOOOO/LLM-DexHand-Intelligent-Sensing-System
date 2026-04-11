@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useArm } from '@/composable/hooks/useArm'
+import {computed, onMounted} from 'vue'
+import {useArm} from '@/composable/hooks/useArm'
 
-const { ArmState, isConnected, connectWebSocket } = useArm()
+const {ArmState, isConnected, connectWebSocket} = useArm()
 
 // 只展示前 6 个关节（不足 6 个则补 0）
 const JOINTS = 6
@@ -11,7 +11,7 @@ const joints6 = computed<number[]>(() => {
   if (!ArmState.value) return Array(JOINTS).fill(0)
   // 适配 hooks 中提取到的状态
   const state = ArmState.value as any
-  const arr = [
+  return [
     state.x || 0,
     state.y || 0,
     state.z || 0,
@@ -19,7 +19,6 @@ const joints6 = computed<number[]>(() => {
     state.ry || 0,
     state.rz || 0
   ]
-  return arr
 })
 
 // 自动缩放范围（也可改成固定 [-180, 180]）
@@ -65,7 +64,7 @@ function barGeom(index: number, value: number) {
   const y = Math.min(y0, yv)
   const h = Math.abs(y0 - yv)
 
-  return { x, y, w: barW, h }
+  return {x, y, w: barW, h}
 }
 
 function colorFor(i: number) {
@@ -90,9 +89,9 @@ onMounted(() => {
     </div>
 
     <svg :width="W" :height="H" class="chart" viewBox="0 0 900 320">
-      <rect :x="padding" :y="padding" :width="W - padding * 2" :height="H - padding * 2" fill="none" stroke="#e5e7eb" />
+      <rect :x="padding" :y="padding" :width="W - padding * 2" :height="H - padding * 2" fill="none" stroke="#e5e7eb"/>
 
-      <line :x1="padding" :x2="W - padding" :y1="zeroY" :y2="zeroY" stroke="#9ca3af" stroke-dasharray="6 6" />
+      <line :x1="padding" :x2="W - padding" :y1="zeroY" :y2="zeroY" stroke="#9ca3af" stroke-dasharray="6 6"/>
       <text :x="padding + 4" :y="zeroY - 6" font-size="12" fill="#6b7280">0</text>
 
       <template v-for="(v, i) in joints6" :key="i">

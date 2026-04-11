@@ -6,7 +6,7 @@ from app.api.RT2Arm import router as arm_router
 
 api_router = APIRouter()
 
-api_router.include_router(llm_router, prefix="/chat", tags=["chat"])
+api_router.include_router(llm_router, prefix="/llm", tags=["chat"])
 api_router.include_router(hand_router, prefix="/hand", tags=["hand"])
-api_router.include_router(db_router, prefix="/data_base", tags=["data_base"])
-api_router.include_router(arm_router, prefix="/robotic_arm", tags=["robotic_arm"])
+api_router.include_router(db_router, prefix="/db", tags=["data_base"])
+api_router.include_router(arm_router, prefix="/arm", tags=["robotic_arm"])

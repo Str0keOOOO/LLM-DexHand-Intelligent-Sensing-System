@@ -9,7 +9,7 @@ export function getChatHistory(limit: number = 20, skip: number = 0) {
 
 
 export function getSensorHistory(target: string, minutes: number) {
-    return request.get<SensorHistoryResponse>('/data_base/sensor_history', {
+    return request.get<SensorHistoryResponse>('/db/sensor_history', {
         params: {target, minutes}
     })
 }

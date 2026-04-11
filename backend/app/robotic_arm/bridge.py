@@ -4,7 +4,7 @@ import httpx
 from fastapi import HTTPException
 
 ROBOT_BACKEND_BASE_URL = "http://127.0.0.1:8001"
-REQUEST_TIMEOUT_S = 10.0
+REQUEST_TIMEOUT_S = 15.0
 
 
 async def _request(method: str, path: str, json: Optional[dict] = None) -> Any:

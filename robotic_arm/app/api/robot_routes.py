@@ -61,31 +61,40 @@ def get_actual_joint_pos_degree():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取机器人角度失败: {e}")
 
+
 # TODO max_dis根本不会影响到移动距离不知道为什么
 @router.post("/move")
 def start_jog(payload: JogRequest):
     """
-    开始JOG运动
+    开始JOG运动（带自愈机制）
     """
     robot = robot_manager.get_robot()
     if robot is None:
-        robot_manager.connect()
-        robot = robot_manager.get_robot()
+        raise HTTPException(status_code=503, detail="机器人未连接")
 
     try:
+        robot.ResetAllError()
+        robot.RobotEnable(1)
         robot.ImmStopJOG()
-        robot.StartJOG(payload.ref, payload.nb, payload.dir, payload.vel, payload.acc, payload.max_dis)
-        time.sleep(1)
-        return SuccessResponse(success=True)
+        ret = robot.StartJOG(payload.ref, payload.nb, payload.dir, payload.vel, payload.acc, payload.max_dis)
+        
+        if ret == 0:
+            return SuccessResponse(success=True)
+        else:
+            error_msg = f"机器人拒绝移动，错误码: {ret}。"
+            if ret == 14:
+                error_msg += " 存在不可复位的物理干预，请登录机械臂 Web 界面查看顶部红色报警提示（如：急停被按下、轴超限、严重碰撞等）。"
+            raise HTTPException(status_code=500, detail=error_msg)
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"启动JOG失败: {e}")
+        raise HTTPException(status_code=500, detail=f"启动JOG异常: {e}")
 
 
 # TODO 搞一下到底应该怎么重置
 @router.get("/reset")
 def reset_robot():
-    """s
-    重置机器人连接
+    """
+    重置机器人：切换到手动模式 -> 开启拖动(10s) -> 关闭拖动 -> 回到自动模式并使能
     """
     robot = robot_manager.get_robot()
     if robot is None:
@@ -93,12 +102,27 @@ def reset_robot():
         robot = robot_manager.get_robot()
 
     try:
-        robot.DragTeachSwitch(1)
+        robot.Mode(1)
+        time.sleep(0.5)
+
+        ret = robot.DragTeachSwitch(1)
+        if ret != 0:
+            raise HTTPException(status_code=500, detail=f"开启拖动失败，错误码: {ret}")
+
+        print("机器人已进入拖动模式，限时10秒...")
         time.sleep(10)
+
         robot.DragTeachSwitch(0)
+        time.sleep(0.5)
+
+        robot.Mode(0)
+
+        robot.RobotEnable(1)
+        time.sleep(1)
 
         return SuccessResponse(success=True)
     except Exception as e:
+        robot.ResetAllError()
         raise HTTPException(status_code=500, detail=f"重置失败: {e}")
 
 

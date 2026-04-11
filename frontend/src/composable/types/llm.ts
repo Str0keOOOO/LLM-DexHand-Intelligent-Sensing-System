@@ -36,14 +36,3 @@ export interface ChatMsg {
     content: string
     model?: string
 }
-
-export interface ControlRespPayload {
-    sent_to?: string
-    sentTo?: string
-    result?: {
-        sent_to?: string
-        [key: string]: any
-    }
-
-    [key: string]: any
-}

@@ -1,23 +1,14 @@
 <script setup lang="ts">
 import {ref, onMounted, onUnmounted, watch} from 'vue';
 import * as echarts from 'echarts';
-import {useHand} from '@/composable/hooks/useHand.ts';
+import {useHand} from '@/composable/hooks/useHand';
 
 // 使用 hook 暴露的 handState
 const {handState} = useHand();
 
 const postureChartRef = ref<HTMLElement | null>(null);
-const velocityChartRef = ref<HTMLElement | null>(null);
-const mAngleRef = ref<HTMLElement | null>(null);
-const mEncRef = ref<HTMLElement | null>(null);
-const mCurRef = ref<HTMLElement | null>(null);
-const mVelRef = ref<HTMLElement | null>(null);
-const mErrRef = ref<HTMLElement | null>(null);
-const mImpRef = ref<HTMLElement | null>(null);
 const normForceRef = ref<HTMLElement | null>(null);
-const normDeltaRef = ref<HTMLElement | null>(null);
 const tangForceRef = ref<HTMLElement | null>(null);
-const tangDeltaRef = ref<HTMLElement | null>(null);
 const dirRef = ref<HTMLElement | null>(null);
 const proxRef = ref<HTMLElement | null>(null);
 const tempRef = ref<HTMLElement | null>(null);
@@ -35,7 +26,7 @@ function getOrderedData(map: Record<string, number> = {}) {
 function createBarChart(dom: HTMLElement | null, title: string, xAxisData: string[], color: string, min: number = 0, max: number = 100) {
   if (!dom) return null;
   const chart = echarts.init(dom);
-  chart.setOption({
+  const option = {
     animation: false,
     title: {text: title, left: 'center', textStyle: {fontSize: 13, color: '#475569'}},
     tooltip: {trigger: 'axis'},
@@ -47,45 +38,35 @@ function createBarChart(dom: HTMLElement | null, title: string, xAxisData: strin
     },
     yAxis: {type: 'value', min: min, max: max},
     series: [{type: 'bar', itemStyle: {color, borderRadius: [2, 2, 0, 0]}, data: [], barMaxWidth: 25}]
-  });
+  };
+  chart.setOption(option);
   return chart;
 }
 
 function initCharts() {
   charts.posture = createBarChart(postureChartRef.value, 'Joint Positions (Deg)', MOTOR_NAMES, '#8b5cf6', 0, 90);
-  // charts.velocity = createBarChart(velocityChartRef.value, 'Joint Velocities (Deg/s)', MOTOR_NAMES, '#10b981', -5, 5);
   charts.normF = createBarChart(normForceRef.value, 'Normal Force (N)', FINGER_NAMES, '#3b82f6', 0, 20);
-  // charts.normD = createBarChart(normDeltaRef.value, 'Normal Force Delta', FINGER_NAMES, '#60a5fa', 0, 30000000);
   charts.tangF = createBarChart(tangForceRef.value, 'Tangential Force (N)', FINGER_NAMES, '#0ea5e9', 0, 20);
-  // charts.tangD = createBarChart(tangDeltaRef.value, 'Tangential Force Delta', FINGER_NAMES, '#38bdf8', 0, 30000000);
-  charts.dir = createBarChart(dirRef.value, 'Direction (0-359°)', FINGER_NAMES, '#8b5cf6', 0, 360);
-  charts.prox = createBarChart(proxRef.value, 'Proximity', FINGER_NAMES, '#f97316', 0, 4060);
+  // 注意：真实数据中方向可能包含负数(如 -1.0)，若需要适应负数可以将 min 改为 'dataMin' 或负值
+  charts.dir = createBarChart(dirRef.value, 'Direction (0-359°)', FINGER_NAMES, '#8b5cf6', -10, 360);
+  charts.prox = createBarChart(proxRef.value, 'Proximity', FINGER_NAMES, '#f97316', 0, 1);
   charts.temp = createBarChart(tempRef.value, 'Temperature (°C)', FINGER_NAMES, '#ef4444', 0, 40);
-  // charts.mAngle = createBarChart(mAngleRef.value, 'Motor Angle (Deg)', MOTOR_NAMES, '#6366f1',);
-  // charts.mVel = createBarChart(mVelRef.value, 'Motor Velocity (rpm)', MOTOR_NAMES, '#14b8a6');
-  // charts.mCur = createBarChart(mCurRef.value, 'Motor Current (mA)', MOTOR_NAMES, '#f59e0b');
-  // charts.mEnc = createBarChart(mEncRef.value, 'Encoder Position', MOTOR_NAMES, '#3b82f6');
-  // charts.mErr = createBarChart(mErrRef.value, 'Error Code (0=Normal)', MOTOR_NAMES, '#ef4444');
-  // charts.mImp = createBarChart(mImpRef.value, 'Impedance', MOTOR_NAMES, '#a855f7');
 }
+
 watch(() => handState.value, (newVal) => {
-  if (!newVal || !newVal.right || !newVal.right.motor || !newVal.right.touch) return;
-  const r = newVal.right;
-  const m = r.motor;
-  const t = r.touch;
-  console.log(handState)
-  charts.posture?.setOption({series: [{data: getOrderedData(r.joint.position)}]});
-  // charts.velocity?.setOption({series: [{data: getOrderedData(r.joint.velocity)}]});
-  // charts.mAngle?.setOption({series: [{data: m.angle || []}]});
-  // charts.mVel?.setOption({series: [{data: m.velocity || []}]});
-  // charts.mCur?.setOption({series: [{data: m.current || []}]});
-  // charts.mEnc?.setOption({series: [{data: m.encoder_position || []}]});
-  // charts.mErr?.setOption({series: [{data: m.error_code || []}]});
-  // charts.mImp?.setOption({series: [{data: m.impedance || []}]});
+  // 兼容带有 { success: true, data: {...} } 外壳或直接是 data 的情况
+  const targetData = newVal?.data || newVal;
+
+  // 校验新格式是否包含 joint, motor, touch 字段
+  if (!targetData || !targetData.motor || !targetData.touch || !targetData.joint) return;
+
+  const t = targetData.touch;
+  const j = targetData.joint;
+
+  // 更新图表数据
+  charts.posture?.setOption({series: [{data: getOrderedData(j.position)}]});
   charts.normF?.setOption({series: [{data: t.normal_force || []}]});
-  // charts.normD?.setOption({series: [{data: t.normal_force_delta || []}]});
   charts.tangF?.setOption({series: [{data: t.tangential_force || []}]});
-  // charts.tangD?.setOption({series: [{data: t.tangential_force_delta || []}]});
   charts.dir?.setOption({series: [{data: t.direction || []}]});
   charts.prox?.setOption({series: [{data: t.proximity || []}]});
   charts.temp?.setOption({series: [{data: t.temperature || []}]});
@@ -99,6 +80,7 @@ onMounted(() => {
   initCharts();
   window.addEventListener('resize', resizeHandler);
 });
+
 onUnmounted(() => {
   window.removeEventListener('resize', resizeHandler);
   Object.values(charts).forEach(c => c?.dispose());
@@ -173,10 +155,6 @@ onUnmounted(() => {
 
 .semantic-indicator {
   background-color: #10b981;
-}
-
-.motor-indicator {
-  background-color: #8b5cf6;
 }
 
 .touch-indicator {

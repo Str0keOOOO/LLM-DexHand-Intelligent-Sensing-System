@@ -76,6 +76,7 @@ function parseContent(content: string) {
 }
 </script>
 
+<!-- TODO 语音唤醒-->
 <template>
   <el-card class="chat-card" :body-style="{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }">
     <template #header>

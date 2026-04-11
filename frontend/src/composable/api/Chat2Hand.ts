@@ -3,11 +3,11 @@ import type {HandCommand, SuccessResponse} from '@/composable/types/robot';
 
 
 export function resetHand() {
-    return request.post<SuccessResponse>('/hand/reset')
+    return request.get<SuccessResponse, SuccessResponse>('/hand/reset')
 }
 
 export function checkHand() {
-    return request.post<SuccessResponse>('/hand/check')
+    return request.get<SuccessResponse, SuccessResponse>('/hand/check')
 }
 
 export function moveHand(data: HandCommand) {

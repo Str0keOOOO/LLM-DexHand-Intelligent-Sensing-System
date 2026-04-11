@@ -1,5 +1,5 @@
 import time
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.schemas import ArmJointsCommand, SuccessResponse
 from influxdb_client import Point
 from app.robotic_arm.bridge import _request
@@ -10,13 +10,17 @@ import asyncio
 router = APIRouter()
 
 
-@router.post("/check")
+@router.get("/check")
 async def connect_robot() -> SuccessResponse:
-    return await _request("POST", "/api/check")
+    return await _request("get", "/api/check")
 
 
 @router.websocket("/pos")
 async def get_actual_joint_pos_degree_ws(websocket: WebSocket):
+    """
+    通过 WebSocket 实时获取机械臂位置数据并存入 InfluxDB。
+    集成了处理嵌套 'data' 字段及过滤 'success' 标识的修复逻辑。
+    """
     await websocket.accept()
     try:
         while True:
@@ -25,8 +29,14 @@ async def get_actual_joint_pos_degree_ws(websocket: WebSocket):
             if data and isinstance(data, dict):
                 pt = Point("arm_joints").time(time.time_ns())
                 has_valid_field = False
-                for k, v in data.items():
+
+                actual_payload = data.get("data", {}) if isinstance(data.get("data"), dict) else data
+
+                for k, v in actual_payload.items():
                     try:
+                        if k in ["success", "timestamp"]:
+                            continue
+
                         pt.field(str(k), float(v))
                         has_valid_field = True
                     except (ValueError, TypeError):
@@ -34,8 +44,12 @@ async def get_actual_joint_pos_degree_ws(websocket: WebSocket):
                 if has_valid_field:
                     write_api.write(bucket=INFLUXDB_BUCKET, org=org, record=pt)
 
+            # 将原始数据实时推送到前端展示
             await websocket.send_json(data)
-            await asyncio.sleep(0.05)
+
+            # 设置采样频率（约 20Hz）
+            await asyncio.sleep(0.2)
+
     except WebSocketDisconnect:
         print("WS Client disconnected")
     except Exception as e:
@@ -54,6 +68,10 @@ async def start_jog(payload: dict):
     return await _request("POST", "/api/move", json=cmd.model_dump())
 
 
-@router.post("/reset")
+@router.get("/reset")
 async def reset() -> SuccessResponse:
-    return await _request("POST", "/api/reset")
+    try:
+        await _request("get", "/api/reset")
+        return SuccessResponse(success=True)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))

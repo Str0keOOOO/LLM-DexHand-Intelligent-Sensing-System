@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # 导入新增的维护函数
 from app.database.mysql import init_db_with_retry, engine, Base, ChatLog, cleanup_old_chat_logs
 from app.database.influx import setup_influx_retention
-from app.ros.bridge import ROSBridgeManager
+from app.hand.bridge import ROSBridgeManager
 from app.api.router import api_router
 
 

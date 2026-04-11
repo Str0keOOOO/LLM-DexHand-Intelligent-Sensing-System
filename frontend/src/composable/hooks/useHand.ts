@@ -124,9 +124,9 @@ export function useHand() {
         connectWebSocket();
     });
 
-    onUnmounted(() => {
-        closeWebSocket();
-    });
+    // onUnmounted(() => {
+    //     closeWebSocket();
+    // });
 
     return {
         /** 当前是否成功通过 WebSocket 连接到了灵巧手的实时数据推送服务 */

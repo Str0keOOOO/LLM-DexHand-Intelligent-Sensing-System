@@ -2,11 +2,11 @@ import request from '@/composable/utils/request'
 import type {ArmCommand, SuccessResponse} from '@/composable/types/robot'
 
 export function resetArm() {
-    return request.post<SuccessResponse>('/arm/reset')
+    return request.get<SuccessResponse>('/arm/reset')
 }
 
 export function checkArm() {
-    return request.post<SuccessResponse>('/arm/check')
+    return request.get<SuccessResponse, SuccessResponse>('/arm/check')
 }
 
 export function moveArm(data: ArmCommand) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import RobotChart from '@/components/RobotChart.vue'
+import HandChart from '@/components/HandChart.vue'
 import ArmChart from '@/components/ArmChart.vue'
 import {TrendCharts} from "@element-plus/icons-vue"
 import {useHand} from '@/composable/hooks/useHand.ts'
@@ -26,7 +26,7 @@ const {isConnected} = useHand()
         </div>
       </template>
       <div class="chart-container">
-        <RobotChart/>
+        <HandChart/>
         <ArmChart/>
       </div>
     </el-card>

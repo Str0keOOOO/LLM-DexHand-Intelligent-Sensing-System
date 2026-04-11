@@ -29,13 +29,12 @@ def get_chat_history(limit: int = 20, skip: int = 0, db: Session = Depends(get_d
 
 @router.get("/sensor_history")
 async def get_sensor_history(
-    target: str = Query("hand", description="查询目标: hand(灵巧手) 或 arm(机械臂)"),
-    minutes: int = Query(1, description="时间范围(分钟)，比如过去1分钟的数据"),
+    target: str = Query("hand", description="查询目标: hand 或 arm"),
+    minutes: int = Query(1, description="时间范围(分钟)"),
 ):
-    """从 InfluxDB 获取机械臂或灵巧手历史数据，返回 {success, data:[{target,data,timestamp}]} 格式"""
-
+    """从 InfluxDB 获取历史数据，并强制执行机械臂字段顺序"""
     measurement = "dexhand_joints" if target == "hand" else "arm_joints"
-
+    
     query = f"""
     from(bucket: "{INFLUXDB_BUCKET}")
       |> range(start: -{minutes}m)
@@ -45,26 +44,40 @@ async def get_sensor_history(
     """
 
     tables = query_api.query(query=query, org=org)
-
     grouped_data = defaultdict(dict)
+    
     for table in tables:
         for record in table.records:
             t = record.get_time()
             ts = int(t.timestamp()) if t else None
-            if ts is None:
-                continue
+            if ts is None: continue
             grouped_data[ts][record.get_field()] = record.get_value()
 
     results = []
-    for ts, fields in grouped_data.items():
-        results.append(
-            {
-                "target": target,
-                "data": fields,
-                "timestamp": ts,
-            }
-        )
+    # 核心修复：定义机械臂期望的显示顺序（支持大小写）
+    arm_key_order = ["x", "y", "z", "rx", "ry", "rz", "Rx", "Ry", "Rz"]
 
-    # 按照时间从新到旧排序
+    for ts, fields in grouped_data.items():
+        ordered_fields = {}
+        if target == "arm":
+            # 1. 按照预设顺序提取已知物理字段
+            for k in arm_key_order:
+                if k in fields:
+                    ordered_fields[k] = fields[k]
+            # 2. 提取其余字段并过滤掉冗余字段
+            for k, v in fields.items():
+                if k not in arm_key_order and k not in ["timestamp", "success"]:
+                    ordered_fields[k] = v
+        else:
+            # 灵巧手保持默认排序
+            ordered_fields = dict(sorted(fields.items()))
+
+        results.append({
+            "target": target,
+            "data": ordered_fields,
+            "timestamp": ts,
+        })
+
+    # 按时间戳从新到旧排序
     results.sort(key=lambda x: x["timestamp"], reverse=True)
     return {"success": True, "data": results}

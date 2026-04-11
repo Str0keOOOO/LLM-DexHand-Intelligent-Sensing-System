@@ -44,6 +44,10 @@ export interface HandState {
     timestamp: number;
 }
 
+export interface ControlForm {
+    hand: string;
+    joints: HandCommand;
+}
 
 // 机械臂
 export interface ArmCommand {

@@ -2,13 +2,6 @@
 
 一个智能感知系统，结合灵巧手硬件与前后端软件，提供高效的交互与数据处理能力。
 
-# 下一步计划
-
-1. 优化机械臂的函数比如重置函数
-2. 优化数据库的保存模式和性能
-3. 优化网页性能
-4. 美化网页
-
 ## 快速开始
 
 ### 前端
@@ -49,8 +42,8 @@ python tools/hardware_test/test_dexhand.py --hands right
 如果运行错误
 
 ```
-usbipd detach --busid 2-3
-usbipd attach --wsl --busid 2-3
+usbipd detach --busid 2-4
+usbipd attach --wsl --busid 2-4
 ```
 
 ### robotic_arm

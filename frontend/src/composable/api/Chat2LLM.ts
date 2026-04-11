@@ -10,7 +10,7 @@ export function checkModelConnect(model: string) {
 
 
 export function listModels() {
-    return request.get<ModelListResponse>('/llm/models')
+    return request.get<ModelListResponse>('/llm/list')
 }
 
 

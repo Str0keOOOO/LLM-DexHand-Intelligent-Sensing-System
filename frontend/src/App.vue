@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router' // 引入 useRoute
-import { Cpu, Document, Monitor, Folder, Setting, DataLine } from "@element-plus/icons-vue"; //
+import {RouterView, useRoute} from 'vue-router'
+import {Cpu, Document, Monitor, Folder, Setting, DataLine} from "@element-plus/icons-vue";
 
-const route = useRoute(); // 初始化路由实例以获取当前路径
+import {useArm} from '@/composable/hooks/useArm';
+import {useHand} from '@/composable/hooks/useHand';
+
+const route = useRoute();
+
+useArm();
+useHand();
 </script>
 
 <template>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import {sendControlCommand} from "@/composable/api/Chat2Hand.ts";
+import {moveHand} from "@/composable/api/Chat2Hand";
+import {useHand} from "@/composable/hooks/useHand";
 import {ElMessage, ElMessageBox} from "element-plus";
+import {Refresh} from "@element-plus/icons-vue";
 import {reactive, ref} from "vue";
-import type {JointsState, ControlForm} from "@/composable/types/robot";
-import {useHand} from "@/composable/hooks/useHand.ts";
+import type {HandCommand, ControlForm} from "@/composable/types/robot";
 
-const {reset, isConnected} = useHand()
+// 获取通讯状态文案与颜色
+const {reset, connStatusText, connStatusColor} = useHand()
 const controlLoading = ref(false)
 
 const controlForm = reactive<ControlForm>({
@@ -19,7 +21,7 @@ const controlForm = reactive<ControlForm>({
   },
 })
 
-const fingerGroups: { name: string; joints: (keyof JointsState)[] }[] = [
+const fingerGroups: { name: string; joints: (keyof HandCommand)[] }[] = [
   {name: 'Global (全局控制)', joints: ['ff_spr']},
   {name: 'Thumb (拇指)', joints: ['th_rot', 'th_mcp', 'th_dip']},
   {name: 'Index (食指)', joints: ['ff_mcp', 'ff_dip']},
@@ -61,13 +63,7 @@ const jointLimits: Record<string, { min: number; max: number }> = {
 async function handleSendControl() {
   controlLoading.value = true
   try {
-    const jointsPayload: Record<string, number> = {...controlForm.joints};
-
-    await sendControlCommand({
-      hand: 'right',
-      joints: jointsPayload
-    })
-
+    await moveHand({...controlForm.joints})
     ElMessage.success(`指令已发送至右手`)
   } catch (error) {
     console.error(error)
@@ -85,15 +81,19 @@ async function confirmHardwareReset() {
         {confirmButtonText: '确定复位', cancelButtonText: '取消', type: 'warning'}
     )
     await reset()
-  } catch {
-    // 用户取消操作
+    ElMessage.success('硬件复位指令已发送')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error(error)
+      ElMessage.error('复位失败，请检查连接')
+    }
   }
 }
 
 function resetSliders() {
-  for (const key in controlForm.joints) {
-    (controlForm.joints as any)[key] = 0
-  }
+  Object.keys(controlForm.joints).forEach((key) => {
+    (controlForm.joints as Record<string, number>)[key] = 0
+  })
   handleSendControl()
 }
 </script>
@@ -103,6 +103,15 @@ function resetSliders() {
     <template #header>
       <div class="card-header">
         <span class="title">灵巧手关节控制(右手)</span>
+        <el-tag
+            :color="connStatusText === '通讯成功' ? '#f0f9eb' : '#fdf2f2'"
+            :style="{ color: connStatusColor }"
+            effect="plain"
+            round
+            class="status-tag"
+        >
+          {{ connStatusText }}
+        </el-tag>
       </div>
     </template>
 
@@ -131,7 +140,7 @@ function resetSliders() {
       <el-divider/>
 
       <div class="footer-actions">
-        <el-button type="danger" plain icon="Refresh" @click="confirmHardwareReset">
+        <el-button type="danger" plain :icon="Refresh" @click="confirmHardwareReset">
           物理复位
         </el-button>
         <div class="right-buttons">
@@ -149,6 +158,24 @@ function resetSliders() {
 .manual-control-card {
   border-radius: 16px;
   height: 100%;
+}
+
+/* 添加 card-header 及 status-tag 样式使其排版对齐 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .status-tag {
+    border: none;
+    font-weight: 500;
+  }
 }
 
 .control-panel {

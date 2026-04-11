@@ -3,20 +3,16 @@ import {checkArm, resetArm, moveArm} from '@/composable/api/Chat2Arm';
 import type {ArmCommand, ArmState} from '@/composable/types/robot';
 import {ElMessage} from 'element-plus';
 
+const isConnecting = ref(false);
+const isConnected = ref(false);
+const ArmState = ref<ArmState | null>(null);
+
+let ws: WebSocket | null = null;
+let reconnectTimer: number | undefined = undefined;
+
 export function useArm() {
-    // --- state ---
-    const isConnecting = ref(false);
-    const isConnected = ref(false);
-
-    // websocket传回的位置/姿态状态
-    const ArmState = ref<ArmState | null>(null);
-
     const connStatusText = computed(() => (isConnected.value ? '通讯成功' : '已断开'));
     const connStatusColor = computed(() => (isConnected.value ? '#22c55e' : '#f56c6c'));
-
-    // --- websocket ---
-    let ws: WebSocket | null = null;
-    let reconnectTimer: number | undefined = undefined;
 
     const connectWebSocket = () => {
         if (ws) return;
@@ -117,10 +113,10 @@ export function useArm() {
         connectWebSocket();
     });
 
-    onUnmounted(() => {
-        // 组件销毁时断开 Websocket
-        closeWebSocket();
-    });
+    // onUnmounted(() => {
+    //     // 组件销毁时断开 Websocket
+    //     closeWebSocket();
+    // });
 
     return {
         /** 当前是否成功通过 WebSocket 连接到了机械臂的实时数据推送服务 */

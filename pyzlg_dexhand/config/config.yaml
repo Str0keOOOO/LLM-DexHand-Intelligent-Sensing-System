@@ -15,7 +15,7 @@ DexHand:
     # Control parameters
     rate: 150.0  # Command sending rate in Hz
     mode: 'impedance_grasp'  # Control mode: impedance_grasp, mit_torque, cascaded_pid, zero_torque, current, speed, hall_position, protect_hall_position
-    alpha: 0.2  # Low-pass filter intensity (0-1)
+    alpha: 1  # Low-pass filter intensity (0-1)
     use_broadcast: true  # Whether to use broadcast mode for more efficient communication
 
     # Topic configuration

@@ -5,13 +5,13 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import ChatRequest, ChatResponse, CheckModelRequest, ModelListResponse, ModelOption, SuccessResponse, HandJointsCommand, ArmJointsCommand
 from app.llm.client import ask_ai, validate_model, AVAILABLE_MODELS, extract_json
-from app.ros.bridge import ROSBridgeManager
+from app.hand.bridge import ROSBridgeManager
 from app.robotic_arm.bridge import _request as arm_request
 from app.database.mysql import get_db, ChatLog
 
 router = APIRouter()
 
-
+# TODO 增加场景任务
 @router.post("/send")
 async def chat(request: Request, req: ChatRequest, db: Session = Depends(get_db)) -> dict:
     bridge: ROSBridgeManager | None = getattr(request.app.state, "ros_bridge", None)
@@ -41,7 +41,7 @@ async def chat(request: Request, req: ChatRequest, db: Session = Depends(get_db)
         "\n2. The 'hand_command' field must have the following keys (floats in degrees): th_dip, th_mcp, th_rot, ff_spr, ff_dip, ff_mcp, mf_dip, mf_mcp, rf_dip, rf_mcp, lf_dip, lf_mcp."
         "\n3. The 'arm_command' field must have: 'nb' (axis: 'x', 'y', 'z', 'Rx', 'Ry', 'Rz'), 'dir' ('positive' or 'negative'), 'vel' (float), 'acc' (float), 'max_dis' (float)."
         "\n4. If no action is needed, omit 'hand_command' and 'arm_command'."
-        '\n5. Valid format example: {"reply": "Moving arm and hand.", "hand_command": {"th_dip": 0.0, "th_mcp": 0.0, "th_rot": 0.0, "ff_spr": 0.0, "ff_dip": 0.0, "ff_mcp": 0.0, "mf_dip": 0.0, "mf_mcp": 0.0, "rf_dip": 0.0, "rf_mcp": 0.0, "lf_dip": 0.0, "lf_mcp": 0.0}, "arm_command": {"nb": "x", "dir": "positive", "vel": 20.0, "acc": 20.0, "max_dis": 30.0}}'
+        '\n5. Valid format example: {{"reply": "Moving arm and hand.", "hand_command": {{"th_dip": 0.0, "th_mcp": 0.0, "th_rot": 0.0, "ff_spr": 0.0, "ff_dip": 0.0, "ff_mcp": 0.0, "mf_dip": 0.0, "mf_mcp": 0.0, "rf_dip": 0.0, "rf_mcp": 0.0, "lf_dip": 0.0, "lf_mcp": 0.0}}, "arm_command": {{"nb": "x", "dir": "positive", "vel": 20.0, "acc": 20.0, "max_dis": 30.0}}}}'
         "\n6. Always ensure the JSON is valid."
     )
 
@@ -108,7 +108,9 @@ async def chat(request: Request, req: ChatRequest, db: Session = Depends(get_db)
                     reply_text += f"\n(Arm Command Error: {str(e)})"
 
             if executed_commands:
-                print("[Control Commands]", json.dumps(executed_commands, ensure_ascii=False))
+                cmd_str = json.dumps(executed_commands, ensure_ascii=False, indent=2)
+                print("[Control Commands]", cmd_str)
+                reply_text += f"\n\n**执行的控制指令:**\n```json\n{cmd_str}\n```"
 
     except Exception as e:
         reply_text = f"Error calling AI: {str(e)}"
